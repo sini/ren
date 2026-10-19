@@ -1,5 +1,0 @@
-
-/vic /operating-memory /pm /goal Complete Ren implementation. Ren is designed at ~/hk/ren-and-stimpy/vic/fleet.md (READONLY). Stimpy is at ./. a flake implementing Ren WITH NO Gen but nixpkgs INSTEAD , its only
-  allowed dependency is github:nixos/nixpkgs.  Ren (Stimpy) is next generation Den built on Nixpkgs. Ren implementation has no domain specific vocabulary,
-  instead templates/fleet defines it own language and relationships and data communication. Use fleet.md as design oracle. Ren must be fully tested using
-  nix-unit both on the library level and template level (which depends on the lib). See how ~/hk/ned does CI testing all things being posible are sound and verified.

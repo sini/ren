@@ -3,21 +3,25 @@
 ![ren](ren-and-stimpy.gif)
 
 Ren is a small surface language for aspect-oriented, context-driven Nix fleets.
-Ren was [designed](vic/fleet.md) by [vic](https://github.com/vic) and is inspired by [Den](https://github.com/denful/den).
+Ren was [designed](design/fleet.md) by [vic](https://github.com/vic) and is inspired by [Den](https://github.com/denful/den).
 If you know Den, you know the ideas. Ren gives them a smaller grammar.
 
-- [Ren](ren) is built only on [Gen](https://github.com/sini/gen) (`github:sini/gen`).
-  Its purpose is to be our first attempt to model the same capabilities of Den on Gen.
-- [Stimpy](stimpy) implements the same [specification](vic/fleet.md) only on `nixpkgs.lib`.
+- [Ren](ren) is built _only_ on [Gen](https://github.com/sini/gen) (`github:sini/gen`).
+  Ren is _NOT_ the next version of Den, it is simply a step forward into making sure we
+  can use Gen to implement all of [Den capabilities](#how-ren-maps-to-den).
+  [ren/lib](ren/lib) makes no use of nixpkgs, neiter lib nor its evalModules. however when the
+  full config is realized the generated modules are handled by templates/fleet to lib.nixosSystem
+  which will always rely on nixpkgs dependency.
+- [Stimpy](stimpy) implements the same [specification](design/fleet.md) only on `nixpkgs.lib`.
   We use it to compare Gen with `nixpkgs.lib`.
 - Both run one shared fleet template. Ren knows nothing about hosts, users or NixOS:
   you declare your own domain, and Ren wires it together.
 
 
-Ren is _NOT_ the next version of Den, it is simply a step forward into making sure we
-can use Gen to implement all of Den capabilities.
 
 ## The grammar
+
+Grammar follows Gen terminology whenever possible.
 
 - **kinds**: the types in your domain. A parent kind lists its child kinds in `below` and picks them with `spawns`.
 - **instances**: the named things of a kind, as `ren.<kind>.<name>`.
@@ -25,7 +29,7 @@ can use Gen to implement all of Den capabilities.
 - **channels**: data that flows from emitter scopes to receiver scopes, with a `fold`.
 - **aspects**: units of configuration. `at` activates them in matching scopes.
 
-Reserved words (`vic/fleet.md`, "Reserved words, v29.A"):
+Reserved words (`design/fleet.md`, "Reserved words, v29.A"):
 
 | group | words |
 |---|---|
@@ -181,7 +185,7 @@ ren.kinds.replica = { db, region }: when (s: s.db.zone == s.region.zone) { };
 A kind can be a function of other instances. `when` guards it: a replica exists only where
 its db and region share a zone. Each replica sends a prometheus scrape target to `lb`.
 
-**Strata.** Ren evaluates in four strata: scopes, activation, content, collectors (`vic/fleet.md`).
+**Strata.** Ren evaluates in four strata: scopes, activation, content, collectors (`design/fleet.md`).
 A negative cycle through `not` or `excludes` is an eval error. A content cycle is infinite
 recursion, never a wrong value.
 
@@ -202,7 +206,7 @@ recursion, never a wrong value.
 | `excludes` | none | gap |
 | forwarding | none | gap |
 
-Rows come from "Gen mapping" in [`vic/fleet.md`](vic/fleet.md). Ren pushes Gen forward at the gaps.
+Rows come from "Gen mapping" in [`design/fleet.md`](design/fleet.md). Ren pushes Gen forward at the gaps.
 
 ## How Ren maps to Den
 
@@ -250,7 +254,7 @@ Rows come from "Gen mapping" in [`vic/fleet.md`](vic/fleet.md). Ren pushes Gen f
 | `meta`, fixed-point `config` self-ref | Nix `let` / `rec` in the aspect's file | covered |
 | nh apps, diagrams, `policyInspect`, `denTest`, import-tree | tooling | out of scope |
 
-Rows come from "Den coverage" in [`vic/fleet.md`](vic/fleet.md). The Ren column is rewritten in v30 words. Ren refuses some Den behaviours on purpose: see "Den behaviours Ren refuses" there.
+Rows come from "Den coverage" in [`design/fleet.md`](design/fleet.md). The Ren column is rewritten in v30 words. Ren refuses some Den behaviours on purpose: see "Den behaviours Ren refuses" there.
 
 ## Usage
 
