@@ -1,7 +1,7 @@
-# e2e rows of fleet-stimpy.md "Expected result" that need realized config.
+# e2e rows of the fleet "Expected result" that need realized config.
 let
   inputs = import ../e2e.nix;
-  o = inputs.stimpy.lib.mkFlake inputs (inputs.import-tree ../modules);
+  o = inputs.impl.lib.mkFlake inputs (inputs.import-tree ../modules);
   lib = inputs.nixpkgs.lib;
   pkgs = inputs.nixpkgs.legacyPackages.x86_64-linux;
   nixos = n: o.nixosConfigurations.${n}.config;
@@ -85,6 +85,15 @@ in
   test-home-syncthing = {
     expr = home.services.syncthing.enable;
     expected = true;
+  };
+  # fleet.md:461,389: `is ren.aspects.desktop parent` on the path: tray on for stage users only
+  test-tray-stage-alice = {
+    expr = stage.home-manager.users.alice.services.syncthing.tray.enable;
+    expected = true;
+  };
+  test-tray-lb-alice = {
+    expr = (nixos "lb").home-manager.users.alice.services.syncthing.tray.enable;
+    expected = false;
   };
   test-home-no-ssh-agent = {
     expr = home.services.ssh-agent.enable;

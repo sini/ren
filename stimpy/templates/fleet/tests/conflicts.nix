@@ -1,0 +1,65 @@
+{ ev, ... }:
+let
+  # every host scope's `into` writes the top-level output probe-out.leaf = leaf host
+  outLeaf =
+    leaf:
+    (ev (
+      { ren, ... }:
+      {
+        ren.channels.probe-out = {
+          fold = ren.lib.fold.list;
+          at = ren.kinds.host;
+          to = e: e;
+          into = { host, ... }: _: { probe-out.leaf = leaf host; };
+        };
+        ren.aspects.probe-out = {
+          at = ren.kinds.host;
+          probe-out = { ... }: 1;
+        };
+      }
+    )).outputs.probe-out.leaf;
+  # two features emit attrsets into one attrs-folded channel, like `packages` (fleet.md:456)
+  intoHello =
+    a: b:
+    (ev (
+      { ren, ... }:
+      {
+        ren.channels.probe-pkgs = {
+          fold = ren.lib.fold.attrs;
+          at = ren.kinds.system;
+          to = e: e;
+          into = { system, ... }: p: { probe-pkgs.${system.name} = p; };
+        };
+        ren.aspects.probe-a = {
+          at = ren.kinds.system;
+          probe-pkgs = { ... }: { hello = a; };
+        };
+        ren.aspects.probe-b = {
+          at = ren.kinds.system;
+          probe-pkgs = { ... }: { hello = b; };
+        };
+      }
+    )).outputs.probe-pkgs.x86_64-linux.hello;
+in
+{
+  # control: equal leaves from many scopes merge (fleet.md:92 top-level keys merge by `attrs`)
+  test-output-merge-equal-leaf = {
+    expr = outLeaf (_: "same");
+    expected = "same";
+  };
+  # fleet.md:449,96: two scopes writing different values at one output path is an error
+  test-output-merge-conflict = {
+    expr = outLeaf (h: h.name);
+    expectedError.type = "ThrownError";
+  };
+  # control: two features that agree merge (fleet.md:454)
+  test-into-attrs-equal-leaf = {
+    expr = intoHello "a" "a";
+    expected = "a";
+  };
+  # fleet.md:456,96: two features giving different `hello` into one attrs pool is an error
+  test-into-attrs-conflict = {
+    expr = intoHello "a" "b";
+    expectedError.type = "ThrownError";
+  };
+}

@@ -1,9 +1,15 @@
-# Lock-walk: builds `inputs` for fleet.nix from ./flake.lock without git-tracked getFlake.
-# stimpy lock node is a local path placeholder; e2e uses ../..
-# The `stimpy` node is the local tree (the lock's path node is only a placeholder).
+# Lock-walk: builds `inputs` for the fleet from ./flake.lock without git-tracked getFlake.
+# The impl (the root input whose lock node is a local path placeholder) is the local tree ../..;
+# it is also exposed as `inputs.impl`, so tests never name it.
 let
   lock = builtins.fromJSON (builtins.readFile ./flake.lock);
-  stimpy = {
+  rootInputs = lock.nodes.root.inputs;
+  implName = builtins.head (
+    builtins.filter (n: (lock.nodes.${rootInputs.${n}}.locked.type or "") == "path") (
+      builtins.attrNames rootInputs
+    )
+  );
+  impl = {
     lib = import ../.. { };
   };
   # `follows` refs are lists of input names, walked from root
@@ -28,11 +34,11 @@ let
       (
         removeAttrs lock.nodes [
           "root"
-          "stimpy"
+          rootInputs.${implName}
         ]
       )
     // {
-      stimpy = stimpy;
+      ${rootInputs.${implName}} = impl;
     };
 in
-builtins.mapAttrs (_: ref: built.${nodeOf ref}) lock.nodes.root.inputs
+builtins.mapAttrs (_: ref: built.${nodeOf ref}) rootInputs // { inherit impl; }

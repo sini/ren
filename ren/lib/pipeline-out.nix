@@ -14,6 +14,7 @@ ren: {
       act,
       aspects,
       strata,
+      receivers,
     }:
     let
       inherit (builtins) attrNames concatMap filter;
@@ -72,9 +73,7 @@ ren: {
           map (outside c) (filter (e: e.channel == c) collect.emissions)
         )
       ) channels;
-      # receivers c e = scopes matching `to e`, e = the emitter's scope (fleet-ren.md:103)
-      receivers = c: e: filter (test (channels.${c}.to sc.scopes.${e.path})) sc.order;
-      pools = C.mkPools { inherit channels emissions receivers; };
+      pools = C.mkPools { inherit channels emissions receivers; } sc.order;
       # ruling: a channel `into` result is top-level outputs only in v1; class/channel keys are refused (fleet-ren.md:100)
       chanFrag =
         c: r:
@@ -95,6 +94,7 @@ ren: {
       );
     in
     {
-      inherit pools outputs;
+      inherit pools outputs emissions;
+      inherit landed collect;
     };
 }

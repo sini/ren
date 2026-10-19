@@ -85,6 +85,7 @@ ren: {
             path = r.id;
             value = r.v;
           }) (filter isChan rest);
+          inherit fwd target;
         };
     in
     {

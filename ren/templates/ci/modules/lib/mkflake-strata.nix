@@ -7,7 +7,7 @@ let
     let
       inherit (ren.lib) and within;
     in
-    ren.lib.mkFlake { } {
+    {
       ren.classes = {
         sys = {
           at = ren.kinds.box;
@@ -46,7 +46,7 @@ let
       ren.pad.d = { };
       ren.person.p = { };
     };
-  out = ren.load { inherit lib; } { } mini;
+  out = ren.mkFlake { nixpkgs = { inherit lib; }; } mini;
 in
 {
   mkflake-strata = {

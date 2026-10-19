@@ -12,11 +12,7 @@ rec {
   };
   fleet =
     extra:
-    {
-      ren,
-      inputs,
-      lib,
-    }:
+    { ren, lib, ... }:
     let
       inherit (ren.lib)
         and
@@ -26,7 +22,7 @@ rec {
         ;
       inherit (ren.lib.fold) list;
     in
-    ren.lib.mkFlake inputs {
+    {
       ren.classes = {
         sys = {
           at = ren.kinds.box;
@@ -94,7 +90,9 @@ rec {
       }
       // extra ren;
     };
-  run = extra: ren.load { inherit lib; } { } (fleet extra);
+  # module form (fleet.md:134): the fleet is a module, inputs carry the nixpkgs lib
+  inputs.nixpkgs = { inherit lib; };
+  run = extra: ren.mkFlake inputs (fleet extra);
   out = run (_: { });
   pick = s: { inherit (s) peers motd users; };
 }

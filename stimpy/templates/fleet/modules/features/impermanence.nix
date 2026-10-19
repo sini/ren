@@ -19,7 +19,7 @@ in
       ])
     ];
     to = e: e.host;
-  }; # STIMPY-C1
+  }; # C1
 
   ren.aspects.impermanence = {
     at = metal;

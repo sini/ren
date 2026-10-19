@@ -1,11 +1,10 @@
 # Channel folds: { __ren = "fold"; name; apply = channelName: emissions: value; }
-# emissions = [ { path = "<scope id>"; value; } ] in arbitrary order.
+# emissions = [ { path = "<scope id>"; value; } ] in scope traversal order (mkPools sorts; fleet.md:444).
 ren: {
   folds =
     let
       inherit (ren) gen;
-      byPath = emissions: builtins.sort (a: b: a.path < b.path) emissions;
-      values = emissions: map (e: e.value) (byPath emissions);
+      values = map (e: e.value);
       mk = name: apply: {
         __ren = "fold";
         inherit name apply;

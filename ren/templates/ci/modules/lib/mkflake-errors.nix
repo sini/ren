@@ -1,10 +1,10 @@
 { ren, lib }:
 let
-  inherit (import ../../fixtures/mkflake.nix { inherit ren lib; }) run;
+  inherit (import ../../fixtures/mkflake.nix { inherit ren lib; }) run inputs;
   # mini fleet: class `sys` at box emits channel `note` (at = zone) from a box scope
   mini =
     { ren, ... }:
-    ren.lib.mkFlake { } {
+    {
       ren.classes.sys = {
         at = ren.kinds.box;
         into = _: _: { note = 1; };
@@ -38,7 +38,7 @@ in
       expectedError.msg = "neither class nor channel";
     };
     test-into-channel-outside-at = {
-      expr = (ren.load { inherit lib; } { } mini).note or null;
+      expr = (ren.mkFlake inputs mini).note or null;
       expectedError.type = "ThrownError";
       expectedError.msg = "emits channel `note` outside its `at`";
     };

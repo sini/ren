@@ -1,10 +1,15 @@
 { ren, lib }:
 let
-  inherit (import ../../fixtures/mkflake.nix { inherit ren lib; }) run out pick;
+  inherit (import ../../fixtures/mkflake.nix { inherit ren lib; })
+    run
+    out
+    pick
+    inputs
+    ;
   # mini fleet: class `probe` at box lists its args; class `any` has no `at`
   probe =
     { ren, ... }:
-    ren.lib.mkFlake { } {
+    {
       ren.classes.probe = {
         at = ren.kinds.box;
         into = args: _: { probed = builtins.attrNames args; };
@@ -17,7 +22,7 @@ let
       ren.root.r = { };
       ren.box.b = { };
     };
-  loaded = ren.load { inherit lib; } { } probe;
+  loaded = ren.mkFlake inputs probe;
 in
 {
   mkflake = {

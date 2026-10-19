@@ -40,17 +40,9 @@ ren: {
       test = p: id: P.test ctx { activeAt = act.active; } p id;
       # ruling: a branch with `at` absent/null matches every scope, like a channel's default (fleet-ren.md:102)
       matches = b: id: (b.at or null) == null || test b.at id;
-      branchAt =
-        c: id:
-        let
-          m = filter (b: matches b id) (L.branches classes.${c});
-        in
-        if builtins.length m > 1 then
-          throw "ren: class `${c}`: more than one branch matches ${id}"
-        else if m == [ ] then
-          null
-        else
-          builtins.head m;
+      inherit (ren.pipelineBranch (args // { inherit matches; })) branchAt branchIx;
+      # receivers c e = scopes matching `to e`, e = the emitter's scope (fleet-ren.md:103)
+      receivers = c: e: filter (test (channels.${c}.to sc.scopes.${e.path})) sc.order;
       # ruling: content's `is P x` tests x's scope on the current path (fleet-ren.md:113), so it is bound per scope id
       renArgs = ren.pipelineArgs {
         inherit
@@ -79,7 +71,7 @@ ren: {
           ;
       };
       strata = ren.strata (args // { inherit matches; });
-      o = out (args // { inherit strata; });
+      o = out (args // { inherit strata receivers; });
     in
     {
       inherit
@@ -88,6 +80,6 @@ ren: {
         aspects
         test
         ;
-      inherit (o) outputs;
+      result = ren.pipelineResult (args // { inherit branchIx receivers o; });
     };
 }

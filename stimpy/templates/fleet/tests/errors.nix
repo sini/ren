@@ -73,7 +73,7 @@ in
     )
   );
   # row: no guest in a guest - guest on a guest makes no scope (see scopes.nix); the module still evaluates
-  # UNTESTABLE-T1: output merge (two scopes writing different nixosConfigurations.lb) - needs forced system values
+  # output merge conflict: conflicts.nix (probe output; nixosConfigurations.lb needs forced system values)
   # UNTESTABLE-T1: unstratified omit/unless cycle - no template fixture; lib tests cover it
-  # UNTESTABLE-T1: Ren exporting `any` (anyOf tombstone) - lib tests
+  # Ren exporting `any`: surface.nix
 }

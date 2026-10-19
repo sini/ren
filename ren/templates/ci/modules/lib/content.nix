@@ -68,19 +68,27 @@ in
     };
     test-pools-order-and-receivers = {
       expr =
-        (c.mkPools {
-          channels.c.fold = ren.fold.list;
-          emissions.c = [
-            (em "b" 2)
-            (em "a" 1)
-            (em "z" 9)
-          ];
-          receivers = _: e: if e.path == "z" then [ "other" ] else [ "me" ];
-        }).c
+        (c.mkPools
+          {
+            channels.c.fold = ren.fold.list;
+            emissions.c = [
+              (em "b" 2)
+              (em "a" 1)
+              (em "z" 9)
+            ];
+            receivers = _: e: if e.path == "z" then [ "other" ] else [ "me" ];
+          }
+          # traversal order, deliberately not string order
+          [
+            "b"
+            "z"
+            "a"
+          ]
+        ).c
           "me";
       expected = [
-        1
         2
+        1
       ];
     };
   };

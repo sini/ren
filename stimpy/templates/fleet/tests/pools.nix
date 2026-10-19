@@ -180,6 +180,6 @@ in
     );
   };
   # UNTESTABLE-T1: per-system packages.<sys>.hello value (derivation: forces nixpkgs legacyPackages)
-  # UNTESTABLE-T1: attrs-in-into two different hello derivations error (needs pkgs)
+  # attrs-in-into conflict: conflicts.nix (probe channel; real hello derivations need pkgs)
   # UNTESTABLE-T1: colmenaHive / ageManifest fed by nixos collector (forces colmena input / realized system)
 }

@@ -59,9 +59,20 @@ ren: {
           emissions,
           receivers,
         }:
+        order:
+        let
+          pos = builtins.listToAttrs (
+            builtins.genList (i: {
+              name = builtins.elemAt order i;
+              value = i;
+            }) (builtins.length order)
+          );
+          # folds see emissions in scope traversal order (fleet.md:444); sort is stable within a scope
+          inOrder = builtins.sort (a: b: pos.${a.path} < pos.${b.path});
+        in
         builtins.mapAttrs (
           c: ch: id:
-          ch.fold.apply c (builtins.filter (e: builtins.elem id (receivers c e)) emissions.${c})
+          ch.fold.apply c (inOrder (builtins.filter (e: builtins.elem id (receivers c e)) emissions.${c}))
         ) channels;
     in
     {

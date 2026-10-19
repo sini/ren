@@ -13,7 +13,8 @@ in
 {
   lib = suites;
   templates = import ./templates/fleet/tests {
-    inherit lib stimpy;
+    inherit lib;
+    impl = stimpy;
     # no pkgs in tier 1: forcing legacyPackages throws
     nixpkgs = {
       inherit lib;
