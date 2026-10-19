@@ -3,7 +3,7 @@
 ![ren](ren-and-stimpy.gif)
 
 Ren is a small surface language for aspect-oriented, context-driven Nix fleets.
-[Ren's design](vic/fleet.md) is inspired by [Den](https://github.com/denful/den).
+Ren was [designed](vic/fleet.md) by [vic](https://github.com/vic) and is inspired by [Den](https://github.com/denful/den).
 If you know Den, you know the ideas. Ren gives them a smaller grammar.
 
 - [Ren](ren) is built only on [Gen](https://github.com/sini/gen) (`github:sini/gen`).
@@ -12,6 +12,10 @@ If you know Den, you know the ideas. Ren gives them a smaller grammar.
   We use it to compare Gen with `nixpkgs.lib`.
 - Both run one shared fleet template. Ren knows nothing about hosts, users or NixOS:
   you declare your own domain, and Ren wires it together.
+
+
+Ren is _NOT_ the next version of Den, it is simply a step forward into making sure we
+can use Gen to implement all of Den capabilities.
 
 ## The grammar
 
@@ -34,8 +38,14 @@ A kind, instance or aspect reference is also a predicate. `at` means "which scop
 
 ## Advanced parts, one at a time
 
-All snippets come from the tested [Fleet template](stimpy/templates/fleet/modules) which was based
+All snippets come from the tested [Fleet template](ren/templates/fleet/modules) which was based
 on Den capabilities and some other advanced usage patterns from [sini's nix-config](https://github.com/sini/nix-config).
+
+Remember that unlike Den, Ren has no NixOS nor other specific domain knowledge. 
+All kind names like `environemnt`, `host`, `mac`, are specific to our Fleet template but you can use
+whatever nouns work best to your problem modeling.
+
+When reading these examples it would be helpful to read the corresponding nix files.
 
 ### A scope tree from `below` and `spawns`
 
