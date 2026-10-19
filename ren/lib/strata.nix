@@ -1,6 +1,6 @@
 # Stratum 3 (fleet-ren.md strata table, row 3): a class branch's `into` reads `outputs` only of
-# targets it does not forward into; reading one it does is a cycle, refused by a static check on
-# the collector graph. Graph edges come from the top-level keys each branch returns (probed lazily).
+# class keys it does not forward into; reading one it does is a cycle, refused by a static check on
+# the class graph. Graph edges come from the top-level keys each branch returns (probed lazily).
 ren: {
   strata =
     {

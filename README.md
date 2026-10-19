@@ -154,13 +154,13 @@ A guest forwards to its host as `nixos.microvm.vms.${guest.name}`. `homeManager`
 branches: in a host, in a mac, in a phone, and standalone.
 In Den you use forward, provide or route policies for this. In Ren, a forward is a key in `into`.
 
-### Channel collectors with `into`
+### Channels with `into`
 
 ```nix
 ren.channels.colmena = {
   fold = attrs;
   at = metal;
-  to = _: ren.fleet.main; # fed by the nixos collector
+  to = _: ren.fleet.main; # fed by the nixos class
   into = { ... }: nodes: {
     colmenaHive = inputs.colmena.lib.makeHive (
       { meta.nixpkgs = inputs.nixpkgs.legacyPackages.x86_64-linux; } // nodes
@@ -169,9 +169,9 @@ ren.channels.colmena = {
 };
 ```
 
-The `nixos` collector emits `colmena.${host.name}` for each metal host. The fleet folds them
-into one hive. Flake `packages` work the same way, one pool per `system` scope.
-In Den you choose outputs with `policy.instantiate` and `intoAttr`. In Ren, a data collector
+The `nixos` class emits `colmena.${host.name}` for each metal host. The fleet folds them
+into one hive. Flake `packages` work the same way, one channel value per `system` scope.
+In Den you choose outputs with `policy.instantiate` and `intoAttr`. In Ren, a data output
 is a channel with `into`.
 
 ### Function kinds
@@ -185,7 +185,7 @@ ren.kinds.replica = { db, region }: when (s: s.db.zone == s.region.zone) { };
 A kind can be a function of other instances. `when` guards it: a replica exists only where
 its db and region share a zone. Each replica sends a prometheus scrape target to `lb`.
 
-**Strata.** Ren evaluates in four strata: scopes, activation, content, collectors (`design/fleet.md`).
+**Strata.** Ren evaluates in four strata: scopes, activation, content, classes (`design/fleet.md`).
 A negative cycle through `not` or `excludes` is an eval error. A content cycle is infinite
 recursion, never a wrong value.
 

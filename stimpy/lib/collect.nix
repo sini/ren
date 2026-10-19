@@ -13,7 +13,7 @@ stimpy: {
       inherit (lib) attrNames concatMap filter;
       inherit (ren) classes channels;
       call = f: args: f (builtins.intersectAttrs (lib.functionArgs f) (args // { inherit outputs; }));
-      # one collector per (class, scope matching a branch); keys static (A-F10), ms stays lazy
+      # one class `into` call per (class, scope matching a branch); keys static (A-F10), ms stays lazy
       cols = concatMap (
         k:
         concatMap (

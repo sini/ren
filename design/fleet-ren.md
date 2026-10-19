@@ -5,10 +5,14 @@
 - C2 (L489): `one`, `list`, `same`, `mergeAttrs`, `byKey` exist as named gen-scope folds (folds.nix:426). Only `set` is not a gen fold.
 - C3 (L18/L101): gen-select `anyOf` exists at bcbc5ca; local ~/hk/gen checkouts are stale.
 - C4 (L300): `persist` at = `anyOf [ host (and [ user (within host) ]) ]`. `to = e: e.host` needs a host binding; users under mac/phone/home have none (measured: `attribute 'host' missing`).
-- C5 (L427 strata row 3): the per-branch stratum-3 static check (a branch must not read `outputs` it forwards into) is enforced by nix/lib/strata.nix: a static check on the collector graph (keys probed per branch); a read of a forwarded-into class's output throws, lazily per key.
+- C5 (L427 strata row 3): the per-branch stratum-3 static check (a branch must not read `outputs` it forwards into) is enforced by nix/lib/strata.nix: a static check on the class graph (keys probed per branch); a read of a forwarded-into class's output throws, lazily per key.
 
 
 v29.A = genie's fork of vic's v29 (gist `fbc69bfc`). It keeps v29's reduction and fixes the places where a rename to a Gen term inverted or overloaded that term. v29 explores how far the surface can shrink. **The previous version is backed up as `vic/fleet-v28.md`**, and we may revert to it. v29 renames words to Gen's own terms only where Gen means the same thing. It merges words that did the same job, and makes the rest relate to each other. Design only; nothing implements it. Feedback goes after `> VIC:` lines.
+
+## What changed from v30
+
+Vocabulary sweep: every section now uses the v30 words; no semantic change.
 
 ## What changed from v29 (genie, v29.A)
 
@@ -307,10 +311,10 @@ ren.lib.mkFlake inputs {
     # channels with `into`: data collectors (not module systems, so not classes)
     packages     = { fold = attrs; at = ren.kinds.system; to = e: e;
                      into = { system, ... }: pkgs': { packages.${system.name} = pkgs'; }; };
-    colmena      = { fold = attrs; at = metal; to = _: ren.fleet.main;          # fed by the nixos collector
+    colmena      = { fold = attrs; at = metal; to = _: ren.fleet.main;          # fed by the nixos class
                      into = { ... }: nodes: { colmenaHive = inputs.colmena.lib.makeHive
                        ({ meta.nixpkgs = inputs.nixpkgs.legacyPackages.x86_64-linux; } // nodes); }; };
-    age-manifest = { fold = attrs; at = metal; to = _: ren.fleet.main;          # fed by the nixos collector
+    age-manifest = { fold = attrs; at = metal; to = _: ren.fleet.main;          # fed by the nixos class
                      into = { ... }: m: { ageManifest = m; }; };
   };
 
@@ -430,11 +434,11 @@ ren.lib.mkFlake inputs {
 | stratum | computes | reads | a cycle inside it is |
 |---|---|---|---|
 | 0 scopes | `below`/`spawns` tree, `is` (subkind), `parent`, `within`, `has K` | instances, `same` (id_hash, needs no scope), `when` on bindings | impossible: gen-scope refuses a cyclic or self-naming `below` |
-| 1 activation | `at`, `take`, `omit`, `has` in predicates | stratum 0 | an eval error "not stratified" if it passes through `unless`/`omit` |
-| 2 content | feature values, pools (`fold`), `has F x`, `features` | strata 0–1, pools (lazy) | Nix infinite recursion: never a wrong value |
-| 3 collectors | `into`: forwards, flake outputs | strata 0–2, and `outputs` of targets this branch does not forward into | an eval error: a static check on the collector graph |
+| 1 activation | `at`, `includes`, `excludes`, `has` in predicates | stratum 0 | an eval error "not stratified" if it passes through `not`/`excludes` |
+| 2 content | aspect values, channels (`fold`), `is P x`, `aspects` | strata 0–1, channels (lazy) | Nix infinite recursion: never a wrong value |
+| 3 classes | `into`: forwards, flake outputs | strata 0–2, and `outputs` of classes this branch does not forward into | an eval error: a static check on the class graph |
 
-`docker`'s `contains ren.user.bob` sits in stratum 0. It reads the same spawn result that put bob there, so it can't drift from the grant rule.
+`docker`'s `has ren.user.bob` sits in stratum 0. It reads the same spawns result that put bob there, so it can't drift from the grant rule.
 
 ## Expected result (new and changed rows only; v25's other rows stand)
 
@@ -448,7 +452,7 @@ ren.lib.mkFlake inputs {
 | standalone home | `homeConfigurations.alice-laptop` (edge HM): git, syncthing | ssh-agent in alice-laptop (not `within machine`) |
 | host-qualified | htop in alice's home on web-1 only | htop for alice on lb/web-2, or for bob anywhere |
 | substitute | web-2 motd = "ren"; others "managed by ren" | both motd values on web-2 (a merge conflict) |
-| `contains` | docker on stage and ci (bob lives on both) | docker on prod hosts; docker that tracks a hand-copied grant |
+| `has` | docker on stage and ci (bob lives on both) | docker on prod hosts; docker that tracks a hand-copied grant |
 | `parent` | alice's syncthing devices = lb, web-1, web-2, stage, ci, studio, pixel, alice-laptop (minus the scope's own parent) | branching on `host ? null` in content |
 | per-system | `packages.{x86_64-linux,aarch64-linux,aarch64-darwin}.hello` | `packages` keyed by host |
 | overlays | every machine has the helix overlay | the overlay applied twice on ci (once through stage) |
@@ -458,17 +462,17 @@ ren.lib.mkFlake inputs {
 | content-function rule | — | a bare `final: prev:` emission evaluating as content |
 | hmPlatforms (`homeDarwin`) | aerospace in alice's and bob's homes on studio only | aerospace in any linux, phone or standalone home |
 | meta = emission | colmena tags for stage include `web` (nginx emits it) | a `meta` key reserved by Ren |
-| flake-file | `flake-file.inputs.{agenix,microvm}` written once, a top-level option beside `nixosConfigurations` | an input listed by a feature that is not active; two features giving `agenix` different urls evaluating |
-| recursive `attrs` | `deploy.nodes.{lb,web-1,web-2,stage}` and `colmena.{…}` merged from four host scopes; `agenix = { url; inputs.nixpkgs.follows; }` from two features that agree on `url` | a conflict error between hosts for the top-level `deploy` key |
-| `anywhere` | a `flake-inputs` emission from a feature `at = ren.fleet.main` reaches `flake-file.inputs` | root-scope emissions dropped because `within` excludes the root |
-| `attrs` in `into` | `packages.x86_64-linux` built from two features' attrsets | two features giving different `hello` derivations evaluating (v27's `mergeAttrsList` kept the last) |
+| flake-file | `flake-file.inputs.{agenix,microvm}` written once, a top-level option beside `nixosConfigurations` | an input listed by an aspect that is not active; two aspects giving `agenix` different urls evaluating |
+| recursive `attrs` | `deploy.nodes.{lb,web-1,web-2,stage}` and `colmena.{…}` merged from four host scopes; `agenix = { url; inputs.nixpkgs.follows; }` from two aspects that agree on `url` | a conflict error between hosts for the top-level `deploy` key |
+| `anywhere` | a `flake-inputs` emission from an aspect `at = ren.fleet.main` reaches `flake-file.inputs` | root-scope emissions dropped because `within` excludes the root |
+| `attrs` in `into` | `packages.x86_64-linux` built from two aspects' attrsets | two aspects giving different `hello` derivations evaluating (v27's `mergeAttrsList` kept the last) |
 | per-branch stratum 3 | the standalone-home branch reads `outputs.nixosConfigurations.<h>.config` (Den `osConfig`) | the `within host` branch reading `outputs.nixosConfigurations` evaluating: it forwards into `nixos`, so that's a cycle |
 | parent-side `spawns` | users on lb, web-*, stage, ci, studio from `usersOn`; alice on pixel; alice on alice-laptop | a `spawns.user` on a kind whose `below` lacks `user` evaluating (gen-scope refuses it) |
 | no guest in a guest | — | `ren.guest.x = { on = ren.guest.ci; }` producing a scope (guest's own `below` has no `guest`) |
-| identity without scopes | `closure` and `granted` compare groups with `same` | identity that needs a group scope (groups never spawn) |
+| identity without scopes | `closure` and `granted` compare groups with `same` | identity that needs a group scope (groups never spawns) |
 | `is P x` on the path | stage users' syncthing tray on (desktop active on `parent`) | `is` picking one of alice's other scopes |
 | `anyOf` | — | Ren exporting `any` (gen-select's tombstone; clashes with `lib.any`) |
-| channel `into` | `packages.<sys>.hello` from the `packages` channel; `colmenaHive` and `ageManifest` fed by the nixos collector | `tools.packages` evaluated as a module (`deferredModule`) |
+| channel `into` | `packages.<sys>.hello` from the `packages` channel; `colmenaHive` and `ageManifest` fed by the nixos class | `tools.packages` evaluated as a module (`deferredModule`) |
 
 > VIC:
 
@@ -482,27 +486,27 @@ Read in gen's code at origin/main (gen bcbc5ca, gen-scope adc5180, gen-select 42
 | several parents | gen-scope: each parent kind lists `user` in its own `below`. Spawned ids must be minted `parent/child` (P is a partial function, build-nodes.nix:244) | glue (ids) |
 | channels with `into` | gen-delivery `realize` with one terminal per channel; gen-aspects keeps them `raw` | glue |
 | `is` subtyping | gen-select `subkind` (constructors.nix:154) matches a kind or its ancestors; gen-schema kinds | glue; whether a scope can bind under two kind names is UNVERIFIED |
-| `within`, `contains`, `parent` | gen-select `within` / `has` / `parentMatches` (match.nix:122/119/125) | direct |
+| `within`, `has`, `parent` | gen-select `within` / `has` / `parentMatches` (match.nix:122/119/125) | direct |
 | `anywhere` | gen-select `star` (constructors.nix, match.nix:100: always true) | direct |
-| fold laws as functions in `into` | the same Ren glue as pool folds | glue |
-| per-branch stratum-3 check | gen-graph `lib/order.nix` over the collector graph | direct (file exists; not read further) |
+| fold laws as functions in `into` | the same Ren glue as channel folds | glue |
+| per-branch stratum-3 check | gen-graph `lib/order.nix` over the class graph | direct (file exists; not read further) |
 | `and anyOf not`, kind/instance refs | gen-select `and` / `anyOf` / `not` / `kind` / `entity` | direct, same names |
 | `when f` | gen-select `when` (called `fn id ctx`) | 1-line adapter |
 | `same` | gen-schema `id_hash` identity | direct |
 | typed strict kinds, ref fields | gen-schema `mkInstanceRegistry`, `mkStrictModule` | direct |
-| features, `take`, target vs signal keys | gen-aspects `includes`, `keyCategory` (class vs channel) | direct |
-| `omit` | none in gen-aspects; gen-rules `conditionalEdge { unless }` and gen-program `suppress` guard an include | GAP: nothing removes an existing include |
+| aspects, `includes`, class vs channel keys | gen-aspects `includes`, `keyCategory` (class vs channel) | direct |
+| `excludes` | none in gen-aspects; gen-rules `conditionalEdge { unless }` and gen-program `suppress` guard an include | GAP: nothing removes an existing include |
 | `has` with stratification, negative-cycle error | gen-program (well-founded and stable-model oracles) | UNVERIFIED |
-| signals, pools | gen-view movement works receiver-side over graph paths; emitter-parameterised `to` is a filter | glue |
+| channels | gen-view movement works receiver-side over graph paths; emitter-parameterised `to` is a filter | glue |
 | `fold` laws | `list` = gen-assemble positional content fold; `set`/`attrs`/`one` not found as named folds | glue |
 | `first` cascade | gen-settings `lib/resolve.nix`: positional authority, no strength lattice (:7) | direct, reversed order |
 | group closure | gen-graph `lib/fixpoint.nix` | direct (file exists; not read further) |
-| target DAG, stratum-3 check | gen-graph `lib/order.nix` | direct (file exists; not read further) |
-| content args | gen-bind `wrapAll` with bindings ∪ pools | direct |
-| targets → outputs | gen-delivery `project` / `realize`, one terminal per collector | glue |
+| class DAG, stratum-3 check | gen-graph `lib/order.nix` | direct (file exists; not read further) |
+| content args | gen-bind `wrapAll` with bindings ∪ channels | direct |
+| classes → outputs | gen-delivery `project` / `realize`, one terminal per class | glue |
 | forwarding | none; two-pass through gen-delivery's `extraModules` inlet | GAP |
 
-The two gaps, forwarding and `omit`, are where Ren would push gen forward rather than just use it.
+The two gaps, forwarding and `excludes`, are where Ren would push gen forward rather than just use it.
 
 ## Den coverage
 
@@ -510,47 +514,47 @@ Every user-facing pattern in `~/hk/den/docs/src/content/docs`, read in full by 4
 
 | Den pattern (doc) | Ren |
 |---|---|
-| aspect class bundle (`explanation/aspects:21`) | feature with several target keys, `at = any [ … ]` |
-| `includes` / nested aspect / `._` children (`guides/configure-aspects:116-225`) | `take = [ … ]`; a group is a plain Nix attrset: `take = lib.attrValues ren.features.editors` |
-| inline fn include (`explanation/aspects:52`) | an anonymous feature inside `take`; its module key is `<taker>/<index>` |
+| aspect class bundle (`explanation/aspects:21`) | one aspect with several class keys (`hm-module`), `at = anyOf [ … ]` |
+| `includes` / nested aspect / `._` children (`guides/configure-aspects:116-225`) | `includes = [ … ]`; a group is a plain Nix attrset |
+| inline fn include (`explanation/aspects:52`) | an anonymous aspect inside `includes` |
 | parametric `{ host, user }:` aspect, arg-shape gating (`explanation/parametric:20-67`) | content args = scope bindings; activation is `at`, never the arg shape |
-| class module forms `{ host, config, pkgs, ... }` (`explanation/class-modules:25-97`) | content fn args = bindings ∪ pools ∪ module args |
-| `excludes`, constraints `exclude`/`substitute`/`filterBy` (`explanation/structural:160-215`) | `omit`; substitute = `omit` + `take` |
-| `"tux@igloo"` host-qualified aspect (`explanation/entities:54`) | `at = all [ ren.user.alice (within ren.host.web-1) ]` (`htop`) |
-| `provides.to-users`, `provides.<user>` (`guides/mutual:88-91`) | `at = all [ ren.kinds.user (within ren.kinds.machine) ]` (`ssh-agent`) |
-| `provides.to-hosts`, `provides.<host>` (`guides/mutual:80-83`) | `at = all [ ren.kinds.host (contains ren.user.bob) ]` (`docker`) |
-| `{ user, ... }:` nixos per user on host (`explanation/where-config-lands:168`) | the `user` target (users.users.<name>) or a host feature mapping over the host's users |
-| `host-aspects` battery (`reference/batteries:133`) | home feature `at` the user, reading `has F host` in content |
-| `hasAspect`, `.forClass`, `host.aspects` (`explanation/structural:28-151`) | `has F x`, `features` |
-| `den.hosts` / `den.homes` / per-user `classes` (`reference/schema:108-236`) | kinds; per-user class = a collector `at = all [ user (when (s: lib.elem "hjem" s.user.classes)) ]` |
-| schema extend, freeform, `strict` (`explanation/entities:117-251`) | kinds are always typed and strict; freeform is not allowed (by design) |
-| `den.schema.<kind>.includes` (`explanation/entities:117`) | feature `at = ren.kinds.<kind>` |
-| `den.default` (`guides/configure-aspects:260`) | feature `at = any [ every kind ]` |
+| class module forms `{ host, config, pkgs, ... }` (`explanation/class-modules:25-97`) | content fn args = bindings, channels and module args |
+| `excludes`, constraints `exclude`/`substitute`/`filterBy` (`explanation/structural:160-215`) | `excludes`; substitute = `excludes` + `includes` (aspect `quiet`) |
+| `"tux@igloo"` host-qualified aspect (`explanation/entities:54`) | `at = and [ ren.user.alice (within ren.host.web-1) ]` |
+| `provides.to-users`, `provides.<user>` (`guides/mutual:88-91`) | `at = and [ ren.kinds.user (within ren.kinds.machine) ]` |
+| `provides.to-hosts`, `provides.<host>` (`guides/mutual:80-83`) | `at = and [ ren.kinds.host (has ren.user.bob) ]` |
+| `{ user, ... }:` nixos per user on host (`explanation/where-config-lands:168`) | a class `at` the user scope (`homeManager`), or a host aspect that maps over the host's users |
+| `host-aspects` battery (`reference/batteries:133`) | home aspect `at` the user, reading `is ren.aspects.desktop parent` in content |
+| `hasAspect`, `.forClass`, `host.aspects` (`explanation/structural:28-151`) | `is P x`, an aspect ref as predicate (`ren.aspects.nginx`), `has` |
+| `den.hosts` / `den.homes` / per-user `classes` (`reference/schema:108-236`) | kinds `ren.kinds.host`, `ren.kinds.home` with instances `ren.host.<name>`; a per-user class = a class `at` the user kind with `when` |
+| schema extend, freeform, `strict` (`explanation/entities:117-251`) | kinds are always typed and strict; freeform is not allowed |
+| `den.schema.<kind>.includes` (`explanation/entities:117`) | aspect `at = ren.kinds.<kind>` |
+| `den.default` (`guides/configure-aspects:260`) | aspect `at = anyOf [ every kind ]` |
 | `fleet` grouping kind (`explanation/fleet:244`) | `ren.kinds.fleet` |
-| `policy.resolve.to`, `resolve` enrich (`reference/policies:39-53`) | `spawn`; enrich = a kind field or a value computed in `spawn f` |
+| `policy.resolve.to`, `resolve` enrich (`reference/policies:39-53`) | `below` and `spawns`; enrich = a kind field or a value computed in `spawns` |
 | `policy.include` / `when` / `for` / `mkPolicy` (`reference/policies:55-274`) | `at` predicates |
-| `policy.provide` / `route` / `deliver` / `forward` battery / `forwardTo` (`reference/policies:71-151`) | collector `into` returning a target key (forward) |
-| `policy.instantiate`, `intoAttr`, `intoAttr = [ ]` (`reference/output:26-101`) | `into` output keys; no output key = no output (guest) |
-| host `instantiate` override, patched nixpkgs (`guides/nixpkgs:243`) | `channel` instance data used by `into` |
-| quirk declare / produce / consume (`reference/quirks:14-105`) | `ren.signals` + key emission + pool arg |
-| `pipe.filter/transform/fold/append/for/as` (`reference/quirks:140-216`) | plain Nix on the pool, plus signal `fold` |
-| `pipe.to [ aspects ]` (`reference/quirks:297`) | `to = e: all [ … (has F) ]` |
-| `pipe.collect` / `collectAll` / `broadcast` / `expose` (`guides/quirks-cross-scope:89-361`) | `to` predicates: same env / any / same instance / ancestor (`to = e: e.host`) |
+| `policy.provide` / `route` / `deliver` / `forward` battery / `forwardTo` (`reference/policies:71-151`) | class `into` returning a class key (it forwards) |
+| `policy.instantiate`, `intoAttr`, `intoAttr = [ ]` (`reference/output:26-101`) | `into` returns top-level option keys; no key = no output (guest) |
+| host `instantiate` override, patched nixpkgs (`guides/nixpkgs:243`) | `channel` kind instance data (`ren.channel.stable`) used by `into` |
+| quirk declare / produce / consume (`reference/quirks:14-105`) | `ren.channels` + a key in an aspect (emission) + a channel arg in content |
+| `pipe.filter/transform/fold/append/for/as` (`reference/quirks:140-216`) | plain Nix on the channel value, plus channel `fold` |
+| `pipe.to [ aspects ]` (`reference/quirks:297`) | `to = e: and [ … ren.aspects.nginx ]` |
+| `pipe.collect` / `collectAll` / `broadcast` / `expose` (`guides/quirks-cross-scope:89-361`) | `to` predicates: same env (`when` + `same`), any (`ren.kinds.machine`), same instance (`e`), ancestor (`e.host`) |
 | `pipe.withProvenance` (`reference/quirks:321`) | emit the source in the value (`{ name; addr; }`) |
-| quirk `{ config, ... }` producer thunk (`explanation/quirks:237`) | **not allowed in content.** Read realized config only in `into` through `outputs` (stratum 3). |
-| settings: reservedKeys, required, mkDefault/mkForce, user settings (`guides/aspect-settings`) | `settingsT` per kind; no default = required; module priorities inside the instance |
-| collision policy `den-wins`/`class-wins` (`reference/aspects:185-224`) | NixOS module merge. Pool and binding names must not clash with module args: eval error |
-| batteries: define-user, hostname, primary-user, user-shell, unfree, insecure, autologin, wsl (`reference/batteries`) | ordinary features shipped by a library; nothing special in Ren |
-| `os`, `user`, hjem, maid, custom classes (`guides/custom-classes`) | targets; `os` is a collector list (host, mac) |
-| flake outputs per system: packages/apps/checks/devShells, `flake` class (`guides/flake-outputs`) | `system` kind + `packages` collector (`tools`) |
+| quirk `{ config, ... }` producer thunk (`explanation/quirks:237`) | not allowed in content; read realized config only in `into` through `outputs` |
+| settings: reservedKeys, required, mkDefault/mkForce, user settings (`guides/aspect-settings`) | `settingsT` per kind; no default = required |
+| collision policy `den-wins`/`class-wins` (`reference/aspects:185-224`) | NixOS module merge; a name clash with a module arg is an eval error |
+| batteries: define-user, hostname, primary-user, user-shell, unfree, insecure, autologin, wsl (`reference/batteries`) | ordinary aspects shipped by a library |
+| `os`, `user`, hjem, maid, custom classes (`guides/custom-classes`) | `ren.classes`; `os` is one class with a list of branches |
+| flake outputs per system: packages/apps/checks/devShells, `flake` class (`guides/flake-outputs`) | `system` kind + `packages` channel with `into` |
 | ACL environments (`guides/acl-environments`) | `group` kind + `closure` + `granted` |
-| overlays, `useGlobalPkgs`, unstable channel (`guides/nixpkgs`) | `channel` kind; overlays = a signal, gated by `when` on the receiver |
-| standalone home, `user@host` home (`guides/standalone-home-manager`) | `home` kind + `homeManager` branch (`alice-laptop`) |
-| microvm `resolve` + `provide` (`tutorials/microvm:145-186`) | `guest` kind (`is = host`) + guest collector forward |
-| terranix / k8s `instantiate` (`tutorials/terranix-demo`, `case-study-kubernetes`) | value-gated collector; a cluster kind + collector per system |
-| impermanence persist collector (`tutorials/case-study-disks-impermanence:280-352`) | `persist` signal, fold `set` (`impermanence`) |
-| `meta`, fixed-point `config` self-ref (`guides/configure-aspects:290-365`) | Nix `let`/`rec` in the feature's file |
-| nh apps, diagrams, policyInspect, denTest, import-tree | tooling, out of Ren's scope |
+| overlays, `useGlobalPkgs`, unstable channel (`guides/nixpkgs`) | `channel` kind; overlays = the `overlays` channel, gated by `when` |
+| standalone home, `user@host` home (`guides/standalone-home-manager`) | `home` kind + `homeManager` class branch |
+| microvm `resolve` + `provide` (`tutorials/microvm:145-186`) | `guest` kind (`is = ren.kinds.host`) + `nixos` class branch at the guest that forwards |
+| terranix / k8s `instantiate` (`tutorials/terranix-demo`, `case-study-kubernetes`) | value-gated class (`terraform`, `when`); a cluster kind + class per system |
+| impermanence persist collector (`tutorials/case-study-disks-impermanence:280-352`) | `persist` channel, `fold = set` |
+| `meta`, fixed-point `config` self-ref (`guides/configure-aspects:290-365`) | Nix `let` / `rec` in the aspect's file |
+| nh apps, diagrams, policyInspect, denTest, import-tree | tooling |
 
 ## Den templates and CI tests vs Ren
 
@@ -562,37 +566,37 @@ The table lists only patterns not already in **Den coverage** above.
 
 | Den pattern (source) | Ren |
 |---|---|
-| hmPlatforms, hmAlias (`ci/…/hm-platform-forward.nix:22`, `forward-alias-class.nix:5`) | sub-target collector forwarding in place (`homeDarwin`); HM's own `osConfig` arg |
-| roleClass: a key named after a role, applied when host and user share it (`guides/custom-class-examples:109`) | `ren.targets = lib.genAttrs roles (r: { at = all [ ren.kinds.user (when (s: shares r s)) ]; into = { ... }: ms: { nixos.imports = ms; }; })` |
-| nixClass: one key to nixos and homeManager `nix.settings` (`custom-class-examples:166`) | a collector list with two branches forwarding to `nixos.nix.settings` and `homeManager.nix.settings` |
-| guarded forward, persys, gitClass: guard on `options ? x` or `config.programs.git.enable` (`ci/…/guarded-forward.nix:24`, `route-intopath-conditional-leak.nix:42`) | guard in stratum 0/1 (`at`, `has`), or `lib.mkIf cond value` around a config *value* inside the target. **Not** `options ? x` around a module: `imports` cannot depend on `options`/`config` (the module system recurses), and `m` is usually a function |
+| hmPlatforms, hmAlias (`ci/…/hm-platform-forward.nix:22`, `forward-alias-class.nix:5`) | sub-class forwarding in place (`homeDarwin`); HM's own `osConfig` arg |
+| roleClass: a key named after a role, applied when host and user share it (`guides/custom-class-examples:109`) | `ren.classes = lib.genAttrs roles (r: { at = and [ ren.kinds.user (when (s: shares r s)) ]; into = { ... }: ms: { nixos.imports = ms; }; })` |
+| nixClass: one key to nixos and homeManager `nix.settings` (`custom-class-examples:166`) | a class list with two branches forwarding to `nixos.nix.settings` and `homeManager.nix.settings` |
+| guarded forward, persys, gitClass: guard on `options ? x` or `config.programs.git.enable` (`ci/…/guarded-forward.nix:24`, `route-intopath-conditional-leak.nix:42`) | guard in stratum 0/1 (`at`, `has`), or `lib.mkIf cond value` around a config *value* inside the class. **Not** `options ? x` around a module: `imports` cannot depend on `options`/`config` (the module system recurses), and `m` is usually a function |
 | `deliver` modes merge / nest / verbatim, dynamic `intoPath` (`ci/…/deliver.nix:46-247`, `dynamic-intopath.nix:5`) | what `into` returns: `ms` as imports (merge), under a path (nest), or into a sub-eval (verbatim, as the guest does) |
-| isolated entity + `collectSubtree` + `appendToParent` (`ci/…/route.nix:211`, `entity-isolation.nix:42`) | guest kind + guest collector; nothing leaks, because content lands only in its own scopes |
-| microvm runners, nvf packages from a parametric aspect (`microvm/microvm-runners.nix:10`, `nvf-standalone/…/den.nix:13`) | a `packages` collector; a feature is a value: `take = [ (neovim { mine = true; }) ]` |
-| terranix modules per host, flake-parts classes devshell/files/treefmt/nix-unit (`terranix-demo/…/terranix.nix:23`, `flake-parts-modules/…/classes/*.nix`) | one collector each; `into` writes the top-level option (`devshells.default`, `files`, `nix-unit.tests`) |
+| isolated entity + `collectSubtree` + `appendToParent` (`ci/…/route.nix:211`, `entity-isolation.nix:42`) | guest kind + guest class; nothing leaks, because content lands only in its own scopes |
+| microvm runners, nvf packages from a parametric aspect (`microvm/microvm-runners.nix:10`, `nvf-standalone/…/den.nix:13`) | a `packages` class; an aspect is a value: `includes = [ (neovim { mine = true; }) ]` |
+| terranix modules per host, flake-parts classes devshell/files/treefmt/nix-unit (`terranix-demo/…/terranix.nix:23`, `flake-parts-modules/…/classes/*.nix`) | one class each; `into` writes the top-level option (`devshells.default`, `files`, `nix-unit.tests`) |
 | home `instantiate` with the host's `osConfig` (`ci/…/special-args-custom-instantiate.nix:6`) | the standalone-home branch reads `outputs.nixosConfigurations.<h>.config` (stratum 3). Legal only because the check is per branch: the `within host` branch forwards into `nixos` |
 | `user@host` home synthesizes a host (`ci/…/standalone-home-host-context.nix:40`) | `home.on = maybe ren.kinds.host`; `when (s: same s.home.on ren.host.x)` |
-| relationship fan-out `{ user, pet }`, transitive `{ pet, toy }` (`ci/…/relationship-fanout.nix:343,431`) | kinds `pet` (spawn under host) and `toy` (spawn under pet); a feature `at = ren.kinds.toy` binds `pet` and `toy` |
-| per-user parametric content stays per user; static content shared (`ci/…/issue-644-parametric-host-forward-per-user.nix:35`) | a feature at user scope fires once per user scope; module key `<feature>@<path>` |
-| chained forward classes (`ci/…/issue-645-chained-forward-classes.nix:41`) | forwards chain (target → target → target), acyclic |
-| same aspect in host and user schema includes, once per scope (`ci/…/relationship-fanout.nix:291`) | `at = any [ host user ]`: one firing per scope |
-| identical values merge, different values error (`ci/…/issue-674-identical-values-merge.nix:14`, `instance-collection-merge.nix:127`) | the `attrs` law for outputs and pools |
-| named inline include identity, shared raw include dedup (`ci/…/nested-key-wrapper-identity.nix:221`, `shared-raw-include-splits.nix:17`) | module key `<feature>@<scope path>`; an anonymous feature in `take` is keyed `<taker>/<index>` |
-| exclude by string rejected (`ci/…/excludes-string-form-rejected.nix:13`) | `omit` takes refs only; a string is a type error |
-| exclude naming a feature that never fires: a warning (`ci/…/unmatched-policy-exclude.nix:29`) | the same warning: an `omit` that removes nothing |
-| quirk named like a class (`den.quirks.nixos`): throws (`ci/…/pipes.nix`) | target and signal names are disjoint: eval error |
+| relationship fan-out `{ user, pet }`, transitive `{ pet, toy }` (`ci/…/relationship-fanout.nix:343,431`) | kinds `pet` (spawns under host) and `toy` (spawns under pet); an aspect `at = ren.kinds.toy` binds `pet` and `toy` |
+| per-user parametric content stays per user; static content shared (`ci/…/issue-644-parametric-host-forward-per-user.nix:35`) | an aspect at user scope fires once per user scope; module key `<aspect>@<path>` |
+| chained forward classes (`ci/…/issue-645-chained-forward-classes.nix:41`) | forwards chain (class → class → class), acyclic |
+| same aspect in host and user schema includes, once per scope (`ci/…/relationship-fanout.nix:291`) | `at = anyOf [ host user ]`: one firing per scope |
+| identical values merge, different values error (`ci/…/issue-674-identical-values-merge.nix:14`, `instance-collection-merge.nix:127`) | the `attrs` law for outputs and channels |
+| named inline include identity, shared raw include dedup (`ci/…/nested-key-wrapper-identity.nix:221`, `shared-raw-include-splits.nix:17`) | module key `<aspect>@<scope path>`; an anonymous aspect in `includes` is keyed `<taker>/<index>` |
+| exclude by string rejected (`ci/…/excludes-string-form-rejected.nix:13`) | `excludes` takes refs only; a string is a type error |
+| exclude naming an aspect that never fires: a warning (`ci/…/unmatched-policy-exclude.nix:29`) | the same warning: an `excludes` that removes nothing |
+| quirk named like a class (`den.quirks.nixos`): throws (`ci/…/pipes.nix`) | class and channel names are disjoint: eval error |
 | `den.schema.conf`: options on every kind (`ci/…/doc-examples.nix:6`) | a shared `let` field set merged into each kind, or an abstract kind with `is` |
 | enrich context with a flag (`isNixos`) via `policy.resolve` (`ci/…/policy-context-enrichment.nix:8`) | a kind ref (`ren.kinds.host` vs `ren.kinds.mac`) or a `let` predicate |
 | `{ self, ... }` fires once at its registration scope (`ci/…/self-guard.nix:13`) | `at = ren.host.igloo` (instance ref) |
 | noflake entry, npins, with-inputs (`noflake/default.nix:1`) | `ren.lib.mkFlake` is a module set; `evalModules` it without a flake |
 | `systems = builtins.attrNames den.hosts` (`fleet-demo/…/flake-parts.nix:4`) | `ren.system` instances |
-| `includeIf` with fallback (`ci/…/fx-includeIf.nix:180`) | `a = { at = all [ K (has sops) ]; … }; b = { at = all [ K (unless (has sops)) ]; … }` |
-| exclude subtree vs `.global`, `filterBy` (`ci/…/fx-constraints.nix:266-688`) | `omit` is subtree; global = an `omit` on a feature `at = ren.fleet.main`; filterBy = `omit = lib.filter p (lib.attrValues ren.features)` |
-| `_module.args.host` colliding with a den arg; `collisionPolicy` (`ci/…/class-module-partial-apply.nix:437-535`) | a binding or pool name clashing with a module arg is an eval error; no policy knob |
-| custom class with no route: throws (`ci/…/forward-to.nix:123`) | a key that names no target or signal: eval error |
+| `includeIf` with fallback (`ci/…/fx-includeIf.nix:180`) | `a = { at = and [ K ren.aspects.sops ]; … }; b = { at = and [ K (not ren.aspects.sops) ]; … }` |
+| exclude subtree vs `.global`, `filterBy` (`ci/…/fx-constraints.nix:266-688`) | `excludes` is subtree; global = an `excludes` on an aspect `at = ren.fleet.main`; filterBy = `excludes = lib.filter p (lib.attrValues ren.aspects)` |
+| `_module.args.host` colliding with a den arg; `collisionPolicy` (`ci/…/class-module-partial-apply.nix:437-535`) | a binding or channel value name clashing with a module arg is an eval error; no policy knob |
+| custom class with no route: throws (`ci/…/forward-to.nix:123`) | a key that names no class or channel: eval error |
 | class key as a list of modules (`ci/…/fx-full-pipeline.nix:247`) | content may be a list; each element is one module in `ms` |
-| den as a library with a custom domain (`ci/…/den-as-lib.nix:62`) | Ren's kernel has no domain names: targets and kinds are all user-declared |
-| flake-level forward, per-host parametric packages (`ci/…/forward-flake-level.nix:5,166`) | a host collector writing `packages.${system}.${"sw-" + host.name}` (attrs law merges hosts) |
+| den as a library with a custom domain (`ci/…/den-as-lib.nix:62`) | Ren's kernel has no domain names: classes and kinds are all user-declared |
+| flake-level forward, per-host parametric packages (`ci/…/forward-flake-level.nix:5,166`) | a host class writing `packages.${system}.${"sw-" + host.name}` (attrs law merges hosts) |
 
 ### Den behaviours Ren refuses (by design)
 
@@ -600,9 +604,9 @@ The table lists only patterns not already in **Den coverage** above.
 |---|---|
 | quirk value `{ config, ... }:` reads the producer's realized config, even cross-host (`ci/…/pipe-config-scope.nix:11`, `bprime-basedrain-crosshost.nix:39`) | content never reads config; read realized config only in `into` via `outputs` (stratum 3) |
 | misplaced entity arg (`{ gadget, ... }:` with no gadget) is silently inert (`ci/…/relationship-fanout.nix:128`) | activation is `at`; a content arg with no binding is an eval error |
-| homeManager content at host scope is silently inert (`ci/…/issue-609-host-scope-hm-leak.nix:17`) | an error if it lands in none of the feature's scopes |
-| `hasAspect` inside `includes` is an infinite recursion (`example/…/hasAspect-examples.nix:109`) | `has F` in `at` is stratified; a cycle is a named eval error |
-| `policy.resolve.shared` vs isolated scopes, `mkPolicy` claimants (`ci/…/policy-resolve-shared.nix`) | no policies: `spawn` makes scopes, predicates select |
+| homeManager content at host scope is silently inert (`ci/…/issue-609-host-scope-hm-leak.nix:17`) | an error if it lands in none of the aspect's scopes |
+| `hasAspect` inside `includes` is an infinite recursion (`example/…/hasAspect-examples.nix:109`) | an aspect ref in `at` is stratified; a cycle is a named eval error |
+| `policy.resolve.shared` vs isolated scopes, `mkPolicy` claimants (`ci/…/policy-resolve-shared.nix`) | no policies: `spawns` makes scopes, predicates select |
 | namespaces, angle brackets, import-tree, diagrams, denTest | outside Ren (gen-link, tooling) |
 
 ## Den feature requests vs Ren
@@ -617,76 +621,76 @@ Sources:
 
 | ask | Ren |
 |---|---|
-| per-feature flake inputs: #348, #336, L17109, L20140, L21482, L33338, L33346; fetch only active features' inputs: L20814 | `flake-inputs` signal + `flake-file` collector. The regenerated `flake.nix` lists only active features' inputs; activation changes need a regeneration step |
-| user content must not change the shared host: #694; host app → all users vs user app → one user: L535, L4888, L5655, L29994 | no provides-to; content lands only in the feature's own scopes; `within` / `contains` |
-| host↔user both ways, opt-in: #450, L1110, L1857, L5676, L6802, L7509, L18917, L18929, L25830, L25875, L27963, L28063 | predicates: `within`, `contains` (`ssh-agent`, `docker`, `htop`) |
-| hmLinux / hmDarwin / hmAarch64 forwards: L26816, L34138, L34189, L34191 | a sub-target collector forwarding in place (`homeDarwin`) |
+| per-aspect flake inputs: #348, #336, L17109, L20140, L21482, L33338, L33346; fetch only active aspects' inputs: L20814 | `flake-inputs` channel + `flake-file` class. The regenerated `flake.nix` lists only active aspects' inputs; activation changes need a regeneration step |
+| user content must not change the shared host: #694; host app → all users vs user app → one user: L535, L4888, L5655, L29994 | no provides-to; content lands only in the aspect's own scopes; `within` / `has` |
+| host↔user both ways, opt-in: #450, L1110, L1857, L5676, L6802, L7509, L18917, L18929, L25830, L25875, L27963, L28063 | predicates: `within`, `has` (`ssh-agent`, `docker`, `htop`) |
+| hmLinux / hmDarwin / hmAarch64 forwards: L26816, L34138, L34189, L34191 | a sub-class forwarding in place (`homeDarwin`) |
 | aspect metadata, tags: L5141, L28728, L28734, L28835 | `meta` is just an emission (fold `set`); `deployment.tags = meta` |
-| `den.hosts.<h>.includes` dropped: #663; `include` typo silent: L14871; early shape errors: L27758, L35195, L31077 | strict kinds; a key that is not a target or signal, or lands nowhere, is an eval error |
-| `os` to systemManager: #718; finix: #662; disko: L30402; timezone for nixos+darwin: L24576 | an `os` collector branch; a collector per builder |
-| nix-on-droid: #517; terranix, per-host plan/apply: #115, L9418, L15871, L16194, L16263 | `droid` target; `terraform` collector (env or host) |
-| custom entity kinds, k8s clusters, identities, domains: #701, L1233, L1312, L7046, L9659 | `ren.kinds.*` + a collector |
-| service discovery, vhost → proxy, contributes-to, host A reacts to host B: L1241, L1891, L3626, L8626, L8666, L8718, L10555, L10638, L13153, L14353, L15580, L22851, L17277, L26453, L28072 | signals with `from`/`to` predicates; `has F x` |
-| `hasAspect` presence, include when A and B: L2011, L4753, L4759, L4804, L19798, L20902, L25924, L27618, L28376 | `has F` in `at` (stratified), `has F x` in content |
+| `den.hosts.<h>.includes` dropped: #663; `include` typo silent: L14871; early shape errors: L27758, L35195, L31077 | strict kinds; a key that is not a class or channel, or lands nowhere, is an eval error |
+| `os` to systemManager: #718; finix: #662; disko: L30402; timezone for nixos+darwin: L24576 | an `os` class branch; a class per builder |
+| nix-on-droid: #517; terranix, per-host plan/apply: #115, L9418, L15871, L16194, L16263 | `droid` class; `terraform` class (env or host) |
+| custom entity kinds, k8s clusters, identities, domains: #701, L1233, L1312, L7046, L9659 | `ren.kinds.*` + a class |
+| service discovery, vhost → proxy, contributes-to, host A reacts to host B: L1241, L1891, L3626, L8626, L8666, L8718, L10555, L10638, L13153, L14353, L15580, L22851, L17277, L26453, L28072 | channels with `from`/`to` predicates; `is P x` |
+| `hasAspect` presence, include when A and B: L2011, L4753, L4759, L4804, L19798, L20902, L25924, L27618, L28376 | an aspect ref in `at` (stratified), `is P x` in content |
 | `includedBy`, leaf-to-root membership, of.host: L16608, L18542, L25436, L33967 | that is what `at` is |
-| relation that is not an instantiation: L25801 | signals and predicates never spawn; only `spawn` creates scopes |
-| exclude an inherited aspect / default on one host or user: L1432, L18502, L21348; variant swap: L1434 | `omit`; substitute = `omit` + `take` |
+| relation that is not an instantiation: L25801 | channels and predicates never spawns; only `spawns` creates scopes |
+| exclude an inherited aspect / default on one host or user: L1432, L18502, L21348; variant swap: L1434 | `excludes`; substitute = `excludes` + `includes` |
 | one default for host users and standalone homes: #205, L1513; `user@host` homes: #206, L12497, L24023, L26159, L26610 | `at = ren.kinds.user`; the `home` kind, plus a field `on = maybe host` |
-| impermanence per aspect: #590, L23751, L31027 | `persist` signal (fold `set`) + `has` |
-| recursive groups, ACL, admin groups from other aspects: L1316, L9646, L27846, L28483 | `group` kind + `closure`; a `groups` signal |
-| global include (sops everywhere): L1244; stateVersion battery: L452 | a feature `at = ren.kinds.machine` |
-| register a user on all hosts, users first-class: L18763, L18807, L19693, L26396, L29019, L30697 | user `spawn f` over `ren.user`; the user kind is host-independent |
-| list a host's users, sync users: L32162, L33144 | `contains ren.kinds.user`, or a signal `to = e: e.host` |
+| impermanence per aspect: #590, L23751, L31027 | `persist` channel (fold `set`) + `has` |
+| recursive groups, ACL, admin groups from other aspects: L1316, L9646, L27846, L28483 | `group` kind + `closure`; a `groups` channel |
+| global include (sops everywhere): L1244; stateVersion battery: L452 | an aspect `at = ren.kinds.machine` |
+| register a user on all hosts, users first-class: L18763, L18807, L19693, L26396, L29019, L30697 | user `spawns f` over `ren.user`; the user kind is host-independent |
+| list a host's users, sync users: L32162, L33144 | `has ren.kinds.user`, or a channel `to = e: e.host` |
 | shared options for nixos + HM, context config from anywhere: L1167, L3370, L3403, L3454, L30900 | kind fields read through bindings (`host.settings`, `user.*`) |
-| per-feature settings namespace: L6027, L25261; package-typed options: L8355, L8468, L28282 | `settingsT`; a field `t.functionTo t.package` |
+| per-aspect settings namespace: L6027, L25261; package-typed options: L8355, L8468, L28282 | `settingsT`; a field `t.functionTo t.package` |
 | per-host channel, patched nixpkgs: L30125, L30448, L30542; per-aspect pkgs: L1640, L4487, L4549, L4584, L13086 | the `channel` kind; content may close over another channel's pkgs |
-| lib/inputs/self'/custom args anywhere: L1669, L9955, L9960, L9986, L11728, L13070, L13096, L13255, L24963, L24975, L30247, L32095 | content args = bindings ∪ pools ∪ module args; `inputs` is in scope |
-| devshell, emacs and maid-list classes, adapters: L858, L4726, L5968, L6528, L6770, L7330, L18218, L32123 | a collector whose `into` maps `ms` into any option |
-| one `pkgs` aspect adapting by include site: L23078; per-host package subsets: L23310 | a `pkgs` collector list (host → systemPackages, user → home.packages); `take` subsets |
-| glob / all children: L14184, L14194, L14212, L14214, L20718, L20743, L21711 | `take = lib.attrValues ren.features.<group>` |
-| colmena, deploy-rs, nh target, fleet deploy: L15847, L15851, L15855, L22308, L24606 | `deployment` signal (fold `one`) read by several collectors |
-| quirks into a fleet file, custom top-level outputs: L24456, L32574, L32688 | a signal `to = _: ren.fleet.main` + a collector |
-| checks class, terraform validate: L32201, L32305, L32410 | a `checks` collector at `system` |
-| secrets declared per aspect, agenix secrets.nix: L21088, L32512, L32515 | a `secrets` signal to the fleet + a collector writing the file |
+| lib/inputs/self'/custom args anywhere: L1669, L9955, L9960, L9986, L11728, L13070, L13096, L13255, L24963, L24975, L30247, L32095 | content args = bindings ∪ channels ∪ module args; `inputs` is in scope |
+| devshell, emacs and maid-list classes, adapters: L858, L4726, L5968, L6528, L6770, L7330, L18218, L32123 | a class whose `into` maps `ms` into any option |
+| one `pkgs` aspect adapting by include site: L23078; per-host package subsets: L23310 | a `pkgs` class list (host → systemPackages, user → home.packages); `includes` subsets |
+| glob / all children: L14184, L14194, L14212, L14214, L20718, L20743, L21711 | `includes = lib.attrValues ren.aspects.<group>` |
+| colmena, deploy-rs, nh class, fleet deploy: L15847, L15851, L15855, L22308, L24606 | `deployment` channel (fold `one`) read by several classes |
+| quirks into a fleet file, custom top-level outputs: L24456, L32574, L32688 | a channel `to = _: ren.fleet.main` + a class |
+| checks class, terraform validate: L32201, L32305, L32410 | a `checks` class at `system` |
+| secrets declared per aspect, agenix secrets.nix: L21088, L32512, L32515 | a `secrets` channel to the fleet + a class writing the file |
 | osConfig of hosts from the flake level: L20831, L21752 | `outputs` (stratum 3) |
-| config invariants across hosts: L22634; assert/throw accounts: L32175 | a fleet collector reading pools or `outputs` and throwing |
+| config invariants across hosts: L22634; assert/throw accounts: L32175 | a fleet class reading channels or `outputs` and throwing |
 | deterministic ids, ports, IPs: L19799, L19824, L19834, L19859, L19990 | a `let` allocator over sorted `ren.<kind>` names (stratum 0); a collision is an eval error |
-| one host in two fleets: L15822 | the same instance on two spawn paths (`any [ spawn … ]`) |
-| per-system outputs from one host (vm): L26519 | a host collector returning several outputs |
-| specialisations, vmVariant-only config: #691, L18129, L18725 | a `variant` kind under host + a collector forwarding to `nixos.specialisation.<n>.configuration` |
-| dedup when two users include the same nixos: L4877; dedup by args: L6414; provenance: L24628 | module key `<feature>@<scope path>`; `attrs` merge law |
-| registry vs activation, policies as values, composition, order-insensitive: L9197, L11117, L14482, L14758, L14790 | refs are values; `all any unless`; `at` activates; folds are order-free (except `list`, by scope path) |
+| one host in two fleets: L15822 | the same instance on two spawns paths (`anyOf [ spawns … ]`) |
+| per-system outputs from one host (vm): L26519 | a host class returning several outputs |
+| specialisations, vmVariant-only config: #691, L18129, L18725 | a `variant` kind under host + a class forwarding to `nixos.specialisation.<n>.configuration` |
+| dedup when two users include the same nixos: L4877; dedup by args: L6414; provenance: L24628 | module key `<aspect>@<scope path>`; `attrs` merge law |
+| registry vs activation, policies as values, composition, order-insensitive: L9197, L11117, L14482, L14758, L14790 | refs are values; `and anyOf not`; `at` activates; folds are order-free (except `list`, by scope path) |
 | shared predicates, typed guards (isDarwin): L12577, L12590, L18476 | `let` predicates (`metal`); kind refs (`ren.kinds.mac`); typos are eval errors |
-| reuse existing nix modules as features: L16853 | `nixos = import ./hardware.nix;` |
-| `pipe.to` an entity, pipe default, `pipe.as`: L15095, L15097, L17329 | `to` predicate; empty pool; a feature emitting a new signal |
+| reuse existing nix modules as aspects: L16853 | `nixos = import ./hardware.nix;` |
+| `pipe.to` an entity, pipe default, `pipe.as`: L15095, L15097, L17329 | `to` predicate; empty channel value; an aspect emitting a new channel |
 | drop `each` from forward: #476; vic's wishlist L752-761 | a forward is a returned key |
 
 ### Possible, but Ren would need a change
 
 | ask | change needed |
 |---|---|
-| patch an attr of a third-party feature or its output before merge: #443, L4923, L6072 | an override form `ren.features.x.override = f`; `omit` + `take` covers only whole-feature swaps |
-| nested feature groups (`dev.cli.bat`) without `provides`: L5146, L5153, L5280, L6019, L19401 | a rule telling a group (no target, signal or reserved keys) from a feature |
-| one feature defined in several files, content fns included: L11448 | a merge law for content functions (merge their results) |
-| a schema on signal values: L30891 | a signal `type` key, checked at emission |
-| use Ren features outside Ren: #569 | `ren.lib.moduleOf feature scope` |
+| patch an attr of a third-party aspect or its output before merge: #443, L4923, L6072 | an override form `ren.aspects.x.override = f`; `excludes` + `includes` covers only whole-aspect swaps |
+| nested aspect groups (`dev.cli.bat`) without `provides`: L5146, L5153, L5280, L6019, L19401 | a rule telling a group (no class, channel or reserved keys) from an aspect |
+| one aspect defined in several files, content fns included: L11448 | a merge law for content functions (merge their results) |
+| a schema on channel values: L30891 | a channel `type` key, checked at emission |
+| use Ren aspects outside Ren: #569 | `ren.lib.moduleOf aspect scope` |
 | priority by specificity (`tux@igloo` over `tux`): #686 | instance ref > kind ref, mapped to `mkOverride` |
-| option docs from the kinds: L9533 | a collector that reads `ren.kinds` as data |
+| option docs from the kinds: L9533 | a class that reads `ren.kinds` as data |
 | explain, trace and inspect resolution: #103, L8976, L12332, L14679, L14726, L21366, L31082, L31202 | an inspector over the strata (why active, where landed) |
 | diagrams, TUI, web UI, LSP, SQL over infra: L1541, L3558, L10982, L16878, L20897, L24400, L28676 | tooling over the same strata data |
 | namespaces, batteries store, versioning, many projects: #158, #538, L10726, L10857, L11570, L28716, L29049 | gen-link (cross-flake), deferred |
 
 ### Not in Ren, by design or outside its reach
 
-- Declaring a host's users inside a feature (L33868): existence is `spawn`, stratum 0.
+- Declaring a host's users inside an aspect (L33868): existence is `spawns`, stratum 0.
 - Real-host config from a standalone home (L1857): a home has no host scope.
 - Clan interop (L176, L22344), angle brackets and import-tree headers (L15404, L18008, L20961): external or tooling.
 ## Open
 
 - **v29.A: parent-side `spawns` scatters "where users come from" over five kinds.** That's the cost of Gen's direction. `usersOn` keeps the rule itself in one place; only the wiring is per parent. If that reads worse to you, a child-side form needs new words (`under`, `picks`), not Gen's `below`/`spawns` with the meaning reversed.
-- **v29.A: channels with `into` vs a third noun.** Folding the data collectors into `channels` keeps the noun count at v29's. The alternative is a `collectors` noun, which is clearer but adds a word.
+- **v29.A: channels with `into` vs a third noun.** Folding the data outputs into `channels` keeps the noun count at v29's. The alternative is a separate noun for data outputs, which is clearer but adds a word.
 
 - **`machine` adopted (vic, v26).** It is the abstract kind for darwin and the `os` class; `host` and `mac` are its subtypes.
-- **`parent` vs naming the kind.** `parent` makes `devices` one line, but a feature that needs "the host" specifically should still bind `host`. `parent` is for code that is generic over parent kinds.
+- **`parent` vs naming the kind.** `parent` makes `devices` one line, but an aspect that needs "the host" specifically should still bind `host`. `parent` is for code that is generic over parent kinds.
 - **Overlay on guests.** ci gets `nixpkgs.overlays` from `base` inside its own config, and its pkgs come from its channel. Whether microvm's `vms.<n>.pkgs` composes with the guest's `nixpkgs.overlays` is a microvm.nix question, not checked.
-- **Den items still not shown:** namespaces from another flake (gen-link), per-user classes (hjem/maid), wsl. Each is a target plus a predicate; none needs new surface.
+- **Den items still not shown:** namespaces from another flake (gen-link), per-user classes (hjem/maid), wsl. Each is a class plus a predicate; none needs new surface.
