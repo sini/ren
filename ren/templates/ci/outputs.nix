@@ -1,16 +1,16 @@
 inputs:
 let
-  lib = inputs.nixpkgs.lib;
   ren = import ../.. { gen = import inputs.gen.outPath { }; };
+  lib = ren.genLib;
   dir = ./modules;
   walk =
     path:
-    lib.concatLists (
+    builtins.concatLists (
       lib.mapAttrsToList (
         name: type:
         if type == "directory" then
           walk (path + "/${name}")
-        else if lib.hasSuffix ".nix" name then
+        else if builtins.match ".*\.nix" name != null then
           [ (path + "/${name}") ]
         else
           [ ]
