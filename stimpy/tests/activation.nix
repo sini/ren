@@ -1,6 +1,6 @@
 { lib, stimpy }:
 let
-  inherit (import ./vocab.nix { inherit lib stimpy; })
+  inherit (import ./_vocab.nix { inherit lib stimpy; })
     run
     err
     z1

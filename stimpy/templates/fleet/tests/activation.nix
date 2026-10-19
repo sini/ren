@@ -1,6 +1,6 @@
 { lib, r, ... }:
 let
-  i = import ./ids.nix;
+  i = import ./_ids.nix;
   has = a: id: lib.elem id (r.active.${a} or [ ]);
   sorted = lib.sort lib.lessThan;
 in

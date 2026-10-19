@@ -1,6 +1,6 @@
 { lib, r, ... }:
 let
-  i = import ./ids.nix;
+  i = import ./_ids.nix;
   sorted = lib.sort lib.lessThan;
   names = builtins.attrNames;
   has = l: x: lib.elem x l;

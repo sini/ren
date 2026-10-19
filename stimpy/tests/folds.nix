@@ -1,7 +1,6 @@
 { lib, stimpy }:
 let
-  merge = import ../../lib/merge.nix { inherit lib; };
-  folds = import ../../lib/folds.nix { inherit lib merge; };
+  inherit (stimpy) merge folds;
   m = merge.mergeStrict [ ];
   thrown = expr: {
     inherit expr;

@@ -1,6 +1,7 @@
 {
   inputs = {
     stimpy.url = "github:vic/stimpy";
+    import-tree.url = "github:denful/import-tree";
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     home-manager = {
@@ -22,5 +23,5 @@
     microvm.url = "github:microvm-nix/microvm.nix";
     impermanence.url = "github:nix-community/impermanence";
   };
-  outputs = inputs: inputs.stimpy.lib.mkFlake inputs ./fleet.nix;
+  outputs = inputs: inputs.stimpy.lib.mkFlake inputs (inputs.import-tree ./modules);
 }

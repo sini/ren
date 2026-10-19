@@ -6,6 +6,10 @@
   nixpkgs,
 }:
 let
+  # the template's own lock pins import-tree; stimpy does not depend on it
+  import-tree = import (
+    builtins.fetchTree (builtins.fromJSON (builtins.readFile ../flake.lock)).nodes.import-tree.locked
+  );
   unfetched = n: throw "unfetched ${n}";
   inputs =
     lib.genAttrs [
@@ -24,22 +28,21 @@ let
       inherit nixpkgs;
       self = unfetched "self";
     };
-  r = stimpy.evalFleet inputs ../fleet.nix;
+  fleet = import-tree ../modules;
+  r = stimpy.evalFleet inputs fleet;
   # ev extra: the same fleet plus one extra module
   ev =
     extra:
     stimpy.evalFleet inputs {
       imports = [
-        ../fleet.nix
+        fleet
         extra
       ];
     };
   args = { inherit lib r ev; };
+  suites = ((import-tree.withLib lib).filterNot (lib.hasSuffix "/default.nix")).leaves ./.;
 in
-{
-  scopes = import ./scopes.nix args;
-  activation = import ./activation.nix args;
-  pools = import ./pools.nix args;
-  collect = import ./collect.nix args;
-  errors = import ./errors.nix args;
-}
+# one suite per file: scopes.nix -> scopes
+lib.listToAttrs (
+  map (f: lib.nameValuePair (lib.removeSuffix ".nix" (baseNameOf f)) (import f args)) suites
+)

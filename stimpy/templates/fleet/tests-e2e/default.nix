@@ -1,7 +1,7 @@
 # e2e rows of fleet-stimpy.md "Expected result" that need realized config.
 let
   inputs = import ../e2e.nix;
-  o = inputs.stimpy.lib.mkFlake inputs ../fleet.nix;
+  o = inputs.stimpy.lib.mkFlake inputs (inputs.import-tree ../modules);
   lib = inputs.nixpkgs.lib;
   pkgs = inputs.nixpkgs.legacyPackages.x86_64-linux;
   nixos = n: o.nixosConfigurations.${n}.config;

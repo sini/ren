@@ -4,7 +4,7 @@
   ...
 }:
 let
-  i = import ./ids.nix;
+  i = import ./_ids.nix;
   thrown = expr: {
     inherit expr;
     expectedError.type = "ThrownError";

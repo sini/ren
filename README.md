@@ -1,14 +1,16 @@
 # Ren & Stimpy
 
-Ren's [design](vic/fleet.md) is inspired by Den as a lib for aspect-oriented and context-driven Nix configurations.
+![ren](ren-and-stimpy.gif)
 
-[Ren](./ren) is a domain-free Nix library built solely on [gen](https://github.com/sini/gen)
+Ren's [design](vic/fleet.md) is inspired by [Den](https://github.com/denful/den), a lib for aspect-oriented and context-driven Nix configurations.
+
+[Ren](./ren) is a library built solely on [gen](https://github.com/sini/gen)
 (`github:sini/gen`).
 
 [Stimpy](./stimpy) is Ren's sibling, implementing the same Ren specification solely on `nixpkgs.lib`
 to provide us a way to compare performance between it and Gen.
 
-Ren language and semantics knows nothing about hosts, users or NixOS. You declare your own
+[Ren language and semantics](./vic/fleet.md) knows nothing about hosts, users or NixOS. You declare your own
 domain, and Ren wires it together.
 
 ## Nouns

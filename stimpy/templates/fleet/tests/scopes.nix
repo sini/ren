@@ -5,7 +5,7 @@
   ...
 }:
 let
-  i = import ./ids.nix;
+  i = import ./_ids.nix;
   ids = builtins.attrNames r.scopes;
   # names of the user scopes directly under parent id
   usersOf =

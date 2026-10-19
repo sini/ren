@@ -1,6 +1,6 @@
 { lib, stimpy }:
 let
-  p = import ../../lib/pred.nix { inherit lib; };
+  p = stimpy.pred;
   mkScope = id: kinds: inst: {
     __ren = {
       ref = "scope";

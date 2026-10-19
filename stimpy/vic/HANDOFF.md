@@ -5,4 +5,4 @@ VERIFIED (main, 2026-10-19): `nix-shell ./shell.nix --run just ci` → 208/208 (
 LAW: vic/fleet-stimpy.md = fleet.md v30 + "Stimpy corrections" C1-C12. C8-C12 = template bugs found by e2e.
 DESIGN: vic/notes/stimpy-design.md (QUORUM RULINGS, INTERNAL API, evalFleet RESULT).
 OPEN FOR VIC: review C1-C12 · C5 check lazy · set fold order = traversal · function-kind when = filter · includes act in subtree (nginx in ci) · into runs on empty ms · into-emissions skip channel at · template flake.lock stimpy node = local path placeholder · E2E-SKIP droid/terranix/aerospace/htop/docker · test files >100 lines · GitHub CI never run.
-NEXT: vic review; push only when vic says.
+NEXT: vic review template modules/ split (vic/notes/template-layout.md); then ren same layout. lib/ manual imports: vic ruling.

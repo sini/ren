@@ -6,7 +6,7 @@ fmt *args:
     treefmt {{args}}
 
 test suite="all" *args:
-    nix-unit --expr 'let x = import ./tests; in if "{{suite}}" == "all" then x else x.{{suite}}' {{args}}
+    nix-unit --expr 'let x = import ./tests.nix; in if "{{suite}}" == "all" then x else x.{{suite}}' {{args}}
 
 e2e:
     nix-unit --expr 'import ./templates/fleet/tests-e2e'

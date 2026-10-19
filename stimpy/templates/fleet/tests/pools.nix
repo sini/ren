@@ -1,6 +1,6 @@
 { lib, r, ... }:
 let
-  i = import ./ids.nix;
+  i = import ./_ids.nix;
   sorted = lib.sort lib.lessThan;
   aliceLb = i.user i.lb "alice";
 in

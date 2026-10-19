@@ -1,7 +1,7 @@
 { lib, stimpy }:
 let
   t = lib.types;
-  view = import ../../lib/view.nix { inherit lib; };
+  inherit (stimpy) view;
   renLib.when = f: {
     __ren = {
       op = "when";
