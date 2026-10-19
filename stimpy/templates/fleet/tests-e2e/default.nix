@@ -1,0 +1,124 @@
+# e2e rows of fleet-stimpy.md "Expected result" that need realized config.
+let
+  inputs = import ../e2e.nix;
+  o = inputs.stimpy.lib.mkFlake inputs ../fleet.nix;
+  lib = inputs.nixpkgs.lib;
+  pkgs = inputs.nixpkgs.legacyPackages.x86_64-linux;
+  nixos = n: o.nixosConfigurations.${n}.config;
+  stage = nixos "stage";
+  ci = stage.microvm.vms.ci.config.config;
+  home = o.homeConfigurations.alice-laptop.config;
+  persist = map (d: d.directory) stage.environment.persistence."/persist".directories; # submodule list
+in
+{
+  test-hostname = {
+    expr = (nixos "lb").networking.hostName;
+    expected = "lb";
+  };
+  test-substitute-web-2 = {
+    expr = (nixos "web-2").environment.etc.motd.text;
+    expected = "ren";
+  };
+  test-substitute-lb = {
+    expr = (nixos "lb").environment.etc.motd.text;
+    expected = "managed by ren";
+  };
+  test-fold-one = {
+    expr = o.deploy.nodes.lb.hostname;
+    expected = "10.0.1.1";
+  };
+  test-fold-list-order = {
+    expr =
+      let
+        cfg = (nixos "lb").services.haproxy.config;
+      in
+      lib.hasInfix "10.0.1.10" (builtins.head (lib.splitString "10.0.1.11" cfg))
+      && lib.hasInfix "10.0.1.11" cfg;
+    expected = true;
+  };
+  test-guest-vm = {
+    expr = ci.networking.hostName;
+    expected = "ci";
+  };
+  test-chained-forward-stage-users = {
+    expr = builtins.attrNames stage.home-manager.users;
+    expected = [
+      "alice"
+      "bob"
+    ];
+  };
+  test-chained-forward-ci-bob = {
+    expr = ci.home-manager.users ? bob;
+    expected = true;
+  };
+  test-kernel-lts = {
+    expr = (nixos "lb").boot.kernelPackages.kernel.version;
+    expected = pkgs.linuxPackages.kernel.version;
+  };
+  test-kernel-latest = {
+    expr = (nixos "web-1").boot.kernelPackages.kernel.version;
+    expected = pkgs.linuxPackages_latest.kernel.version;
+  };
+  test-persist-members = {
+    expr = lib.all (d: builtins.elem d persist) [
+      "/var/lib/nginx"
+      "/var/lib/docker"
+    ];
+    expected = true;
+  };
+  test-persist-no-dups = {
+    expr = lib.unique persist == persist;
+    expected = true;
+  };
+  test-overlays = {
+    expr = builtins.length (nixos "lb").nixpkgs.overlays;
+    expected = 1;
+  };
+  test-packages-hello = {
+    expr = o.packages.x86_64-linux.hello.type;
+    expected = "derivation";
+  };
+  test-home-git = {
+    expr = home.programs.git.enable;
+    expected = true;
+  };
+  test-home-syncthing = {
+    expr = home.services.syncthing.enable;
+    expected = true;
+  };
+  test-home-no-ssh-agent = {
+    expr = home.services.ssh-agent.enable;
+    expected = false;
+  };
+  test-darwin-hostname = {
+    expr = o.darwinConfigurations.studio.config.networking.hostName;
+    expected = "studio";
+  };
+  test-darwin-dock = {
+    expr = o.darwinConfigurations.studio.config.system.defaults.dock.autohide;
+    expected = true;
+  };
+  # C10: motd evaluates on darwin (row 439)
+  test-darwin-motd = {
+    expr = o.darwinConfigurations.studio.config.environment.etc.motd.text;
+    expected = "managed by ren";
+  };
+  # C8: dev lands git as a package on every os (fleet.md:439)
+  test-darwin-git-pkg = {
+    expr = lib.any (
+      p: (p.pname or "") == "git"
+    ) o.darwinConfigurations.studio.config.environment.systemPackages;
+    expected = true;
+  };
+  test-nixos-lb-git-pkg = {
+    expr = lib.any (p: (p.pname or "") == "git") (nixos "lb").environment.systemPackages;
+    expected = true;
+  };
+  test-flake-file-inputs = {
+    expr = lib.all (n: o.flake-file.inputs ? ${n}) [
+      "agenix"
+      "microvm"
+    ];
+    expected = true;
+  };
+}
