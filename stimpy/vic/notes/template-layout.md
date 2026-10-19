@@ -64,7 +64,7 @@ Args graph (who publishes ⟶ who reads):
 
 ## Tests
 
-- tier1 `templates/fleet/tests/default.nix`: `fleet = import-tree ../modules`; suites = `(import-tree.withLib lib).filterNot (hasSuffix "/default.nix")).leafs ./.` ⟹ one suite per file. Helper data = `_ids.nix` (`/_` ⟹ not a suite).
+- tier1 `templates/fleet/tests/default.nix`: `fleet = import-tree ../modules`; suites = `(import-tree.withLib lib).filterNot (hasSuffix "/default.nix")).leaves ./.` ⟹ one suite per file. Helper data = `_ids.nix` (`/_` ⟹ not a suite).
 - import-tree for tier1 = template `flake.lock` node `import-tree` via `builtins.fetchTree`, read INSIDE `templates/fleet/tests/default.nix`. Template owns the dep.
 - e2e `tests-e2e/default.nix`: `mkFlake inputs (inputs.import-tree ../modules)`; `e2e.nix` lock-walk builds `import-tree` like any node.
 - Split oracle (one-shot, scratchpad): `evalFleet` old `fleet.nix` vs `import-tree ./modules` ⟹ same scopes/active/landed/emitted/branches/output names; neg control (drop motd.nix) ⟹ eval error.
