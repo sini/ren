@@ -4,9 +4,22 @@
 # Nix attrset keys are strict, so `ren`'s keys cannot come from a decl that reads `ren`:
 #   pass 1 calls the file with only `ren.lib` and reads the kind names; pass 2 gets the full `ren`.
 # ruling: `ren.<kind>` exists for every declared kind (empty when it has no instances) (fleet-ren.md:95).
-{ gen, surface }:
+ren:
 let
-  build = import ./pipeline.nix { inherit gen; };
+  inherit (ren) pipeline;
+  surface = {
+    inherit (ren)
+      and
+      anyOf
+      not
+      when
+      within
+      has
+      is
+      same
+      fold
+      ;
+  };
   mkFlake = inputs: decl: {
     __ren = "flake";
     inherit inputs decl;
@@ -21,14 +34,19 @@ in
     { lib }:
     inputs: file:
     let
-      call = ren: (file { inherit ren inputs lib; }).decl.ren;
+      call =
+        r:
+        (file {
+          ren = r;
+          inherit inputs lib;
+        }).decl.ren;
       names = builtins.attrNames ((call { lib = renLib; }).kinds or { });
-      d = call ren;
-      p = build {
+      d = call world;
+      p = pipeline {
         inherit lib names;
         decl = d;
       };
-      ren = {
+      world = {
         # ruling: `is P x` on a scope tests P at that scope; content gets `parent` as a scope (fleet-ren.md:467)
         # ruling: an instance x needs the current path (fleet-ren.md:113): renLib.is throws, use content's `{ is, ... }:`
         lib = renLib // {
