@@ -204,6 +204,54 @@ recursion, never a wrong value.
 
 Rows come from "Gen mapping" in [`vic/fleet.md`](vic/fleet.md). Ren pushes Gen forward at the gaps.
 
+## How Ren maps to Den
+
+| Den pattern | Ren construct | status |
+|---|---|---|
+| aspect class bundle | one aspect with several class keys (`hm-module`), `at = anyOf [ … ]` | covered |
+| `includes`, nested aspect, `._` children | `includes = [ … ]`; a group is a plain Nix attrset | covered |
+| inline fn include | an anonymous aspect inside `includes` | covered |
+| parametric `{ host, user }:` aspect | content args = scope bindings; activation is `at`, never the arg shape | covered |
+| class module forms `{ host, config, pkgs, ... }` | content fn args = bindings, channels and module args | covered |
+| `excludes`, `exclude` / `substitute` / `filterBy` | `excludes`; substitute = `excludes` + `includes` (aspect `quiet`) | covered |
+| `"tux@igloo"` host-qualified aspect | `at = and [ ren.user.alice (within ren.host.web-1) ]` | covered |
+| `provides.to-users`, `provides.<user>` | `at = and [ ren.kinds.user (within ren.kinds.machine) ]` | covered |
+| `provides.to-hosts`, `provides.<host>` | `at = and [ ren.kinds.host (has ren.user.bob) ]` | covered |
+| `{ user, ... }:` nixos per user on host | a class `at` the user scope (`homeManager`), or a host aspect that maps over the host's users | covered |
+| `host-aspects` battery | home aspect `at` the user, reading `is ren.aspects.desktop parent` in content | covered |
+| `hasAspect`, `.forClass`, `host.aspects` | `is P x`, an aspect ref as predicate (`ren.aspects.nginx`), `has` | covered |
+| `den.hosts`, `den.homes`, per-user `classes` | kinds `ren.kinds.host`, `ren.kinds.home` with instances `ren.host.<name>`; a per-user class = a class `at` the user kind with `when` | covered |
+| schema extend, freeform, `strict` | kinds are always typed and strict; freeform is not allowed | refused (by design) |
+| `den.schema.<kind>.includes` | aspect `at = ren.kinds.<kind>` | covered |
+| `den.default` | aspect `at = anyOf [ every kind ]` | covered |
+| `fleet` grouping kind | `ren.kinds.fleet` | covered |
+| `policy.resolve.to`, `resolve` enrich | `below` and `spawns`; enrich = a kind field or a value computed in `spawns` | covered |
+| `policy.include` / `when` / `for` / `mkPolicy` | `at` predicates | covered |
+| `policy.provide` / `route` / `deliver` / `forward` / `forwardTo` | class `into` returning a class key (it forwards) | covered |
+| `policy.instantiate`, `intoAttr` | `into` returns top-level option keys; no key = no output (guest) | covered |
+| host `instantiate` override, patched nixpkgs | `channel` kind instance data (`ren.channel.stable`) used by `into` | covered |
+| quirk declare / produce / consume | `ren.channels` + a key in an aspect (emission) + a channel arg in content | covered |
+| `pipe.filter` / `transform` / `fold` / `append` / `for` / `as` | plain Nix on the channel value, plus channel `fold` | covered |
+| `pipe.to [ aspects ]` | `to = e: and [ … ren.aspects.nginx ]` | covered |
+| `pipe.collect` / `collectAll` / `broadcast` / `expose` | `to` predicates: same env (`when` + `same`), any (`ren.kinds.machine`), same instance (`e`), ancestor (`e.host`) | covered |
+| `pipe.withProvenance` | emit the source in the value (`{ name; addr; }`) | covered |
+| quirk `{ config, ... }` producer thunk | not allowed in content; read realized config only in `into` through `outputs` | refused (by design) |
+| settings: `reservedKeys`, required, `mkDefault` / `mkForce` | `settingsT` per kind; no default = required | covered |
+| collision policy `den-wins` / `class-wins` | NixOS module merge; a name clash with a module arg is an eval error | covered |
+| batteries (`define-user`, `hostname`, `unfree`, `wsl`, …) | ordinary aspects shipped by a library | covered |
+| `os`, `user`, hjem, maid, custom classes | `ren.classes`; `os` is one class with a list of branches | covered |
+| flake outputs per system, `flake` class | `system` kind + `packages` channel with `into` | covered |
+| ACL environments | `group` kind + `closure` + `granted` | covered |
+| overlays, `useGlobalPkgs`, unstable channel | `channel` kind; overlays = the `overlays` channel, gated by `when` | covered |
+| standalone home, `user@host` home | `home` kind + `homeManager` class branch | covered |
+| microvm `resolve` + `provide` | `guest` kind (`is = ren.kinds.host`) + `nixos` class branch at the guest that forwards | covered |
+| terranix / k8s `instantiate` | value-gated class (`terraform`, `when`); a cluster kind + class per system | covered |
+| impermanence persist collector | `persist` channel, `fold = set` | covered |
+| `meta`, fixed-point `config` self-ref | Nix `let` / `rec` in the aspect's file | covered |
+| nh apps, diagrams, `policyInspect`, `denTest`, import-tree | tooling | out of scope |
+
+Rows come from "Den coverage" in [`vic/fleet.md`](vic/fleet.md). The Ren column is rewritten in v30 words. Ren refuses some Den behaviours on purpose: see "Den behaviours Ren refuses" there.
+
 ## Usage
 
 ```nix
