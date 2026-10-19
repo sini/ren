@@ -1,12 +1,12 @@
 # evalFleet: fleet module -> view -> pipeline -> RESULT (scopes active landed forwarded emitted pools branches outputs).
 # ruling: the fleet is a module; `ren` = `_module.args.ren` (fleet.md:134,579), replacing the two-pass loader.
-# ruling: module evaluation uses the fleet's own `inputs.nixpkgs.lib` (Ren itself depends on Gen only).
+# ruling: module evaluation uses Gen's gen-merge (evalModuleTree); Ren depends on Gen only.
 ren: {
   mkFlake = inputs: module: (ren.evalFleet inputs module).outputs;
   evalFleet =
     inputs: module:
     let
-      inherit (inputs.nixpkgs) lib;
+      lib = ren.genLib;
       inherit (ren) view;
       cfg =
         (lib.evalModules {
