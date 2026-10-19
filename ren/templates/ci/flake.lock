@@ -1,0 +1,62 @@
+{
+  "nodes": {
+    "gen": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1792271438,
+        "narHash": "sha256-P0/9CBCgvwGeNlcyLvh+hMLzDktTjJ4KN/PvPwhimcI=",
+        "owner": "sini",
+        "repo": "gen",
+        "rev": "bcbc5ca579614643fa3433034fd0248b0d551f65",
+        "type": "github"
+      },
+      "original": {
+        "owner": "sini",
+        "repo": "gen",
+        "rev": "bcbc5ca579614643fa3433034fd0248b0d551f65",
+        "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1792116957,
+        "narHash": "sha256-EjZqHKObBfIOeHZnMRVV87HB3pPq/WBkmRJWyFxmZu8=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "f20cd90e28fe0403873f473b29e42662cd86e8c4",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "ref": "nixpkgs-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "gen": "gen",
+        "nixpkgs": "nixpkgs",
+        "with-inputs": "with-inputs"
+      }
+    },
+    "with-inputs": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1792339655,
+        "narHash": "sha256-y98sqtCGDKnD90PMK5qV3ux94sg/Fc/8Ka9+T8YeieE=",
+        "owner": "denful",
+        "repo": "with-inputs",
+        "rev": "641d01ef95eae1aeaa257ffd48102ab9a308f2a2",
+        "type": "github"
+      },
+      "original": {
+        "owner": "denful",
+        "repo": "with-inputs",
+        "type": "github"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}

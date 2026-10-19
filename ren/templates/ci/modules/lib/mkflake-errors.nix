@@ -1,0 +1,46 @@
+{ ren, lib }:
+let
+  inherit (import ../../fixtures/mkflake.nix { inherit ren lib; }) run;
+  # mini fleet: class `sys` at box emits channel `note` (at = zone) from a box scope
+  mini =
+    { ren, ... }:
+    ren.lib.mkFlake { } {
+      ren.classes.sys = {
+        at = ren.kinds.box;
+        into = _: _: { note = 1; };
+      };
+      ren.kinds = {
+        root.below = [ ren.kinds.box ];
+        box = { };
+      };
+      ren.root.r = { };
+      ren.box.b = { };
+      ren.channels.note = {
+        fold = ren.lib.fold.list;
+        at = ren.kinds.root;
+        to = _: ren.kinds.root;
+        into = _: pool: { note = pool; };
+      };
+      ren.aspects.a = {
+        at = ren.kinds.box;
+        sys = { };
+      };
+    };
+in
+{
+  mkflake-errors = {
+    test-unknown-key-inactive-aspect = {
+      expr =
+        (run (_: {
+          ghost.bogus = 1;
+        })).systems;
+      expectedError.type = "ThrownError";
+      expectedError.msg = "neither class nor channel";
+    };
+    test-into-channel-outside-at = {
+      expr = (ren.load { inherit lib; } { } mini).note or null;
+      expectedError.type = "ThrownError";
+      expectedError.msg = "emits channel `note` outside its `at`";
+    };
+  };
+}
